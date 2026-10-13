@@ -934,6 +934,30 @@ function buPasses(bu) {
     return _buFilters.size === 0 || _buFilters.has(bu);
 }
 
+// A Supabase project caps any single response at its own "Max Rows" API
+// setting (1000 by default) — .limit() in client code can ask for more,
+// but past that cap the API silently truncates instead of erroring (no
+// error, no warning — the extra rows just aren't in `data`). Discovered
+// 2026-10-13: b_opportunity_qt_item crossed 1000 rows and started
+// silently dropping the newest ones from every total on this page — a
+// deal's real -81.3% churn computed as -100% because its churn QT's line
+// items (inserted after the first 1000) were simply never fetched.
+// Paginate with .range() instead of a single .limit() so these 3 tables
+// can never silently truncate again, no matter how large they grow.
+async function fetchAllRows(table, select) {
+    const pageSize = 1000;
+    let from = 0;
+    let all = [];
+    while (true) {
+        const { data, error } = await supabaseClient.from(table).select(select).range(from, from + pageSize - 1);
+        if (error) return { data: null, error };
+        all = all.concat(data || []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+    }
+    return { data: all, error: null };
+}
+
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function loadData() {
     const [
@@ -944,17 +968,11 @@ async function loadData() {
         { data: cfg },
         { data: profiles }
     ] = await Promise.all([
-        supabaseClient.from('b_opportunity_list')
-            // total_amount/total_gp not selected — every aggregate on this page
-            // is derived from b_opportunity_qt_item line items instead.
-            .select('opportunity_id, opportunity_name, account_id, status, business_type, lead_source, create_date, signed_date, churn_date, owner')
-            .limit(3000),
-        supabaseClient.from('b_opportunity_qt')
-            .select('qt_id, opportunity_id, qt_type')
-            .limit(5000),
-        supabaseClient.from('b_opportunity_qt_item')
-            .select('qt_id, bu, qty, price, discount, gp')
-            .limit(20000),
+        // total_amount/total_gp not selected — every aggregate on this page
+        // is derived from b_opportunity_qt_item line items instead.
+        fetchAllRows('b_opportunity_list', 'opportunity_id, opportunity_name, account_id, status, business_type, lead_source, create_date, signed_date, churn_date, owner'),
+        fetchAllRows('b_opportunity_qt', 'qt_id, opportunity_id, qt_type'),
+        fetchAllRows('b_opportunity_qt_item', 'qt_id, bu, qty, price, discount, gp'),
         supabaseClient.from('b_account_list').select('account_id, account_name'),
         supabaseClient.from('b_opportunity_config').select('type, value, color, active').in('type', ['bu', 'status', 'business_type']).order('value'),
         supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
