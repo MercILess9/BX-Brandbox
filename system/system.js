@@ -73,6 +73,21 @@ function applyBrandingValues(cfg) {
     if (cfg.logo_icon_url) {
         const authLogo = document.getElementById('brandbox-logo');
         if (authLogo) authLogo.src = cfg.logo_icon_url;
+        // Browser-tab favicon — a separate mechanism from the in-app logos
+        // above. vercel.json's static /favicon.ico redirect only changes
+        // via manually re-uploading a file straight to Storage, so it
+        // silently goes stale the moment someone updates the Icon Logo
+        // here instead (confirmed on CB: the file hadn't been touched
+        // since before Branding even existed). Swapping the <link> tag
+        // itself keeps the tab icon in sync with Settings automatically.
+        let favicon = document.querySelector('link[rel="icon"]');
+        if (!favicon) {
+            favicon = document.createElement('link');
+            favicon.rel = 'icon';
+            document.head.appendChild(favicon);
+        }
+        favicon.type = 'image/png';
+        favicon.href = cfg.logo_icon_url;
     }
 }
 
