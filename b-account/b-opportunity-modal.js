@@ -1565,7 +1565,13 @@ const BOppApp = (() => {
                 oppId = data.opportunity_id;
                 _newOppId = oppId;
                 for (const qt of _qts) await insertQTToDB(oppId, qt, 'original');
-                // fire-and-forget email notification
+                // New-Opportunity email notification — disabled 2026-10-14
+                // at the user's request (recipient was hardcoded to
+                // thitiphon@brand-strom.com with no way to configure it from
+                // the UI). The send-notification Edge Function itself is
+                // untouched/still deployed, so this can be re-enabled by
+                // uncommenting once there's a real configurable recipient.
+                /*
                 fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1598,6 +1604,7 @@ const BOppApp = (() => {
                         to: ['thitiphon@brand-strom.com'],
                     }),
                 }).catch(err => console.warn('[notify]', err));
+                */
             }
 
             getBsModal().hide();
