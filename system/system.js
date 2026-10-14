@@ -341,8 +341,15 @@ function bxLoader(label) {
         <svg width="0" height="0" style="position:absolute">
             <defs>
                 <linearGradient id="bx-grad" x1="0" x2="1">
-                    <stop offset="0%"   stop-color="#b8d137" stop-opacity="0"/>
-                    <stop offset="100%" stop-color="#b8d137" stop-opacity="1"/>
+                    <!-- stop-color set via inline style (not the bare attribute)
+                         so it can read the CSS custom property --c-accent —
+                         SVG honors CSS on presentation attributes this way,
+                         but not on the raw attribute itself. Previously
+                         hardcoded to #b8d137 (not even the real brand lime,
+                         #bdc432) and never followed a Settings → Branding
+                         accent-color change. -->
+                    <stop offset="0%"   style="stop-color:var(--c-accent, #bdc432)" stop-opacity="0"/>
+                    <stop offset="100%" style="stop-color:var(--c-accent, #bdc432)" stop-opacity="1"/>
                 </linearGradient>
             </defs>
         </svg>
