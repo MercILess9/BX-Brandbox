@@ -128,7 +128,17 @@
             </div>
             <div class="bx-sp-list"></div>
         `;
-        document.body.appendChild(panel);
+        // Bootstrap 5's modal FocusTrap forces focus back inside the modal
+        // the instant a focusin fires on anything outside it — a panel
+        // appended to document.body sits outside that boundary, so its
+        // search input could be clicked but never actually hold focus
+        // (every keystroke's focus got yanked straight back), making it
+        // impossible to type into whenever this opens from inside an open
+        // Bootstrap modal (e.g. the B-Quest task modal's Type/Work
+        // pickers). position:fixed still renders relative to the
+        // viewport regardless of DOM ancestor, so appending inside the
+        // open modal instead costs nothing visually.
+        (document.querySelector('.modal.show') || document.body).appendChild(panel);
 
         const r = trigger.getBoundingClientRect();
         panel.style.left = r.left + 'px';

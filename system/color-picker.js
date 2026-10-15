@@ -279,7 +279,9 @@
         panel = document.createElement('div');
         panel.className = 'cs-cp-panel';
         panel.style.width = width + 'px';
-        document.body.appendChild(panel);
+        // Appended inside an open Bootstrap modal when one exists — see
+        // select-picker.js's openSelectPicker() for the FocusTrap writeup.
+        (document.querySelector('.modal.show') || document.body).appendChild(panel);
         render();
 
         const r = trigger.getBoundingClientRect();

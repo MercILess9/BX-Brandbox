@@ -122,7 +122,12 @@
         panel.className = 'cs-icp-panel';
         panel.style.width = width + 'px';
         panel.style.maxHeight = maxHeight + 'px';
-        document.body.appendChild(panel);
+        // Appended inside an open Bootstrap modal when one exists —
+        // Bootstrap 5's FocusTrap yanks focus back to the modal on any
+        // focusin outside it, so a body-appended panel's search input
+        // could never actually hold focus from in there. See
+        // select-picker.js's openSelectPicker() for the full writeup.
+        (document.querySelector('.modal.show') || document.body).appendChild(panel);
         render();
 
         const r = trigger.getBoundingClientRect();

@@ -88,6 +88,9 @@
         // stopPropagation-on-card pair, just without needing the latter.
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
         document.body.appendChild(overlay);
+        // injectMarkup() only runs once (first use), but which modal (if
+        // any) is open can differ on every call — openAssignPicker() below
+        // re-parents this same overlay into whichever is open each time.
 
         list = overlay.querySelector('.bx-ap-list');
         searchInput = overlay.querySelector('.bx-ap-search');
@@ -106,6 +109,14 @@
 
     window.openAssignPicker = function ({ candidates = [], title = 'Assign', emptyText = 'No candidates for this role', allowClear = true, clearLabel = 'Unassigned', onSelect }) {
         injectMarkup();
+        // Bootstrap 5's modal FocusTrap forces focus back inside the modal
+        // on any focusin outside it — this overlay living under
+        // document.body meant its search input could be clicked but never
+        // actually hold focus whenever opened from inside the B-Quest task
+        // modal. Re-parent into whichever modal is currently open (if any)
+        // every time, since injectMarkup() above only runs once. See
+        // select-picker.js's openSelectPicker() for the full writeup.
+        (document.querySelector('.modal.show') || document.body).appendChild(overlay);
 
         titleEl.textContent = title;
         overlay.style.display = 'flex';

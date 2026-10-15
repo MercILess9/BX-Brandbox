@@ -229,7 +229,10 @@
                 </div>
                 <div class="bx-drp-grid"></div>
             `;
-            document.body.appendChild(panel);
+            // Appended inside an open Bootstrap modal when one exists —
+            // see select-picker.js's openSelectPicker() for the FocusTrap
+            // writeup (same issue, same fix).
+            (document.querySelector('.modal.show') || document.body).appendChild(panel);
             const r = trigger.getBoundingClientRect();
             panel.style.left = r.left + 'px';
             panel.style.top = (r.bottom + 6) + 'px';
