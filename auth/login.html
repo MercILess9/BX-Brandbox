@@ -2,14 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Sign in to the Brandbox / Brandstrom X portal.">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>Brandbox | Login</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
-    <script src="/auth/auth.js"></script>
+
+    <!-- defer on every script here (including the inline one at the
+         bottom of <body>) unblocks initial HTML parsing/paint without
+         changing execution order — deferred scripts still run in
+         document order, right before DOMContentLoaded, so config.js →
+         system.js → auth.js → the inline handler still resolves in the
+         same sequence it always has. -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script src="/system/config.js" defer></script>
+    <script src="/system/system.js" defer></script>
+    <script src="/auth/auth.js" defer></script>
 
     <style>
         :root {
@@ -54,16 +62,27 @@
 
         .pass-input { padding-right: 45px !important; }
 
+        /* 44x44 is the WCAG minimum touch-target size — the icon itself
+           stays 18px, but the clickable/tappable area around it is padded
+           out to meet that, positioned so the icon still lands in the
+           same visual spot as before. */
         .password-toggle-btn {
-            position: absolute; right: 15px;
+            position: absolute; right: 2px;
+            width: 44px; height: 44px;
             background: none; border: none; cursor: pointer;
-            color: #888; display: flex; align-items: center;
+            color: #888; display: flex; align-items: center; justify-content: center;
             padding: 0; z-index: 10;
         }
 
+        input.pass-input { min-height: 44px; }
+
+        /* White text on the brand lime (--brand-accent) fails WCAG AA
+           contrast (~1.6:1, needs 4.5:1) — swapping to the existing dark
+           brand color passes easily without touching the button's own
+           lime background. */
         .btn-main {
             width: 100%; padding: 16px; background: var(--brand-accent);
-            border: none; border-radius: 12px; color: #fff;
+            border: none; border-radius: 12px; color: var(--brand-accent-dark);
             font-weight: 700; font-size: 16px; cursor: pointer;
             margin-top: 1rem; transition: 0.2s;
         }
@@ -77,8 +96,8 @@
 </head>
 <body class="js-enabled">
 
-<div class="card">
-    <div class="logo-wrap"><img id="brandbox-logo" src="" alt="Brandbox"></div>
+<main class="card">
+    <div class="logo-wrap"><img id="brandbox-logo" src="" alt="Brandbox" height="80"></div>
 
     <form id="loginForm">
         <div class="group">
@@ -90,7 +109,7 @@
             <label>Password</label>
             <div class="input-wrapper">
                 <input id="password" type="password" class="pass-input" placeholder="Enter your password" required>
-                <button type="button" class="password-toggle-btn" onclick="togglePass('password', this)">
+                <button type="button" class="password-toggle-btn" onclick="togglePass('password', this)" aria-label="Show password">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 </button>
             </div>
@@ -98,31 +117,43 @@
 
         <button class="btn-main" type="submit">Sign In</button>
     </form>
-    
+
     <div class="footer-links">
         <a href="signup.html" id="signup-link">Sign up</a>
         <span id="signup-link-sep">•</span>
         <a href="forgot-password.html">Forgot Password?</a>
     </div>
-</div>
+</main>
 
 <script>
-    document.getElementById('brandbox-logo').src = LOGO_URL;
+    // The config.js/system.js <script> tags above are now `defer`red (see
+    // their own comment) to stop blocking the initial render — but `defer`
+    // has no effect on an inline script like this one (no `src`, so the
+    // HTML spec says the attribute is ignored outright); without this
+    // DOMContentLoaded wrapper, this would still run the instant the
+    // parser reaches it, BEFORE those deferred scripts have executed,
+    // and LOGO_URL/initLayout would be undefined every time. togglePass()
+    // below stays outside this wrapper since it's called from inline
+    // onclick= (needs to exist as a global immediately) and doesn't touch
+    // anything from those deferred scripts anyway.
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('brandbox-logo').src = LOGO_URL;
 
-    // สั่งให้ระบบเริ่มทำงาน
-    if (typeof initLayout === 'function') {
-        initLayout();
-        isSignupOpen().then(open => {
-            if (!open) {
-                document.getElementById('signup-link').style.display = 'none';
-                document.getElementById('signup-link-sep').style.display = 'none';
-            }
-        });
-    } else {
-        // กรณีหาไฟล์ system.js ไม่เจอ ให้ฝืนเปิดหน้าจอ
-        document.body.classList.remove('js-enabled');
-        console.error("System Engine not found. Check your paths!");
-    }
+        // สั่งให้ระบบเริ่มทำงาน
+        if (typeof initLayout === 'function') {
+            initLayout();
+            isSignupOpen().then(open => {
+                if (!open) {
+                    document.getElementById('signup-link').style.display = 'none';
+                    document.getElementById('signup-link-sep').style.display = 'none';
+                }
+            });
+        } else {
+            // กรณีหาไฟล์ system.js ไม่เจอ ให้ฝืนเปิดหน้าจอ
+            document.body.classList.remove('js-enabled');
+            console.error("System Engine not found. Check your paths!");
+        }
+    });
 
     // Toggle Password UI
     const svgOpen = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
@@ -133,6 +164,7 @@
         const isPass = input.type === "password";
         input.type = isPass ? "text" : "password";
         btn.innerHTML = isPass ? svgClose : svgOpen;
+        btn.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
     }
 
     // Form Submit
