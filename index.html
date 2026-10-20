@@ -5,11 +5,18 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-STROM | Brandstrom X Portal</title>
     <meta name="description" content="Brandstrom X internal portal — B-Quest, B-Account, B-Finance and more.">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    <!-- defer unblocks initial render without changing execution order
+         (deferred scripts still run in document order, right before
+         DOMContentLoaded) — see auth/login.html's own copy of this
+         comment for the one thing it doesn't cover: the inline script
+         below still has to wait for DOMContentLoaded itself, since defer
+         has no effect on a script with no src. -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script src="/system/config.js" defer></script>
+    <script src="/system/system.js" defer></script>
     <link rel="stylesheet" href="/system/theme.css">
 
     <style>
@@ -525,7 +532,7 @@
             window.location.href = '/auth/login.html';
         }
 
-        initIndex();
+        document.addEventListener('DOMContentLoaded', initIndex);
     </script>
 </body>
 </html>
