@@ -63,15 +63,22 @@
         display: none;
     }
 
-    /* ─── Center menu ─── */
+    /* ─── Center menu ───
+       flex:1 between the brand/user zones, not absolutely centered on the
+       viewport — the old left:50%/translateX(-50%) centered against the
+       FULL window width regardless of how wide the brand zone (logo +
+       divider + project name + version badge) was, so at tablet/phone-
+       landscape widths (~800-1050px) the nav links slid left and
+       overlapped the project title. Centering within the remaining flex
+       space can never overlap a sibling. */
     #sys-nav-inject {
         display: flex;
         align-items: center;
+        justify-content: center;
         height: 100%;
         gap: 28px;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .sys-menu-link {

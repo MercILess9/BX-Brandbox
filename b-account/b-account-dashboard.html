@@ -36,6 +36,10 @@
            completely (looks like the filter bar just vanishes). */
         .dash-ctrl { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 10px 20px; position: sticky; top: 64px; z-index: 100; }
         .dash-ctrl-inner { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        @media (max-width: 640px) {
+            .dash-ctrl { padding: 8px 16px; }
+            .dash-ctrl-inner { gap: 8px; }
+        }
         .dash-updated { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
         /* What range the whole page is currently showing — sits right next
            to the title since every card/chart below reads off the same
