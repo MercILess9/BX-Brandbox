@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-ACCOUNT | Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -64,6 +65,11 @@
         /* ── KPI Row ── */
         .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
         @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+        /* Each card now carries 4 lines of content (value+exact amount,
+           divider, Net/Lost row) — 2-up still works down to tablet width,
+           but a real phone needs the full width per card or that content
+           gets cramped. */
+        @media (max-width: 560px) { .kpi-row { grid-template-columns: 1fr; } }
         .kpi-card { background: #fff; border: 1px solid #eef2f7; border-radius: 16px; padding: 15px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .kpi-label { font-size: 0.65rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; justify-content: space-between; }
         .kpi-label-text { display: flex; align-items: center; gap: 7px; }
@@ -293,7 +299,7 @@
         /* Sales Performance / Top Partner — max ~10 rows visible,
            scroll for the rest, header pinned so column labels (and the
            active sort arrow) stay visible while scrolling. */
-        .dash-tbl-scroll { max-height: 460px; overflow-y: auto; }
+        .dash-tbl-scroll { max-height: 460px; overflow-y: auto; overflow-x: auto; }
         .dash-tbl-scroll thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
         /* Sales Performance — click a rep row to expand its per-BU
            breakdown as extra rows directly underneath, chevron rotates
@@ -2616,6 +2622,7 @@ function renderTypeDonut({ typeMap }) {
     // GP, GP% and Opportunity count per type so the standalone "GP by
     // Business Type" cards section isn't needed anymore.
     document.getElementById('typeLegend').innerHTML = entries.length ? `
+        <div style="overflow-x:auto">
         <table class="dash-tbl">
             <thead><tr><th>Type</th><th class="r">Amount</th><th class="r">GP</th><th class="r">GP%</th><th class="r">Opportunity</th></tr></thead>
             <tbody>
@@ -2628,6 +2635,7 @@ function renderTypeDonut({ typeMap }) {
                 </tr>`).join('')}
             </tbody>
         </table>
+        </div>
     ` : '<div class="dash-empty">No data</div>';
 }
 
@@ -2734,6 +2742,7 @@ function chfHeaderSpans(field) {
 function renderChurnTable() {
     const sorted = churnFilteredSortedRows();
     document.getElementById('churnTableWrap').innerHTML = `
+        <div style="overflow-x:auto">
         <table class="dash-tbl churn-tbl">
             <colgroup>
                 <col style="width:100px">
@@ -2782,6 +2791,7 @@ function renderChurnTable() {
                 }).join('') : `<tr><td colspan="10" class="dash-empty">No matches</td></tr>`}
             </tbody>
         </table>
+        </div>
     `;
     updateChurnSortIcons();
     updateChurnFilterIcons();
@@ -2944,6 +2954,7 @@ function renderLeadSource({ leadMap }) {
     });
 
     document.getElementById('leadTableWrap').innerHTML = `
+        <div style="overflow-x:auto">
         <table class="dash-tbl">
             <thead><tr><th>Source</th><th class="r">Amount</th><th class="r">Opportunity</th><th class="r">Share%</th></tr></thead>
             <tbody>
@@ -2958,6 +2969,7 @@ function renderLeadSource({ leadMap }) {
                 }).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 
