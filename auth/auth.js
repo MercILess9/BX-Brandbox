@@ -93,11 +93,13 @@ async function handleForgotPassword(email) {
 
         if (error) throw error;
 
+        // No confirmButtonColor — the shared .swal2-styled.swal2-confirm
+        // rule in system.js already themes this correctly (var(--c-dark)),
+        // a hardcoded value here would override it with a stale color.
         Swal.fire({
             icon: "success",
             title: "Link Sent!",
-            text: "Please check your email to reset password.",
-            confirmButtonColor: "rgb(45, 71, 57)"
+            text: "Please check your email to reset password."
         });
 
     } catch (err) {

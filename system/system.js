@@ -273,7 +273,7 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
             border-radius: 22px 22px 0 0;
             background: linear-gradient(90deg, #475569, #64748b);
         }
-        .swal2-popup:has(.swal2-icon.swal2-success)::before { background: linear-gradient(90deg, #a8b02c, #bdc432); }
+        .swal2-popup:has(.swal2-icon.swal2-success)::before { background: linear-gradient(90deg, var(--c-accent-dark, #7a8500), var(--c-accent, #bdc432)); }
         .swal2-popup:has(.swal2-icon.swal2-warning)::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
         .swal2-popup:has(.swal2-icon.swal2-error)::before   { background: linear-gradient(90deg, #dc2626, #ef4444); }
         .swal2-title { font-size: 1.5rem !important; font-weight: 800 !important; color: var(--c-dark, #1e293b) !important; padding: 0 !important; margin: 14px 0 0 !important; }
@@ -289,9 +289,9 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
            hardcoded em offsets calibrated for the default icon size, so
            resizing the container throws their alignment off. */
         .swal2-icon { border: none !important; }
-        .swal2-icon.swal2-success { color: #7a8500 !important; background: #f2f4d1 !important; box-shadow: 0 12px 26px -8px rgba(189,196,50,0.55) !important; }
-        .swal2-icon.swal2-success [class^='swal2-success-line'] { background-color: #7a8500 !important; }
-        .swal2-icon.swal2-success .swal2-success-ring { border-color: rgba(189,196,50,0.25) !important; }
+        .swal2-icon.swal2-success { color: var(--c-accent-dark, #7a8500) !important; background: var(--c-accent-light, #f2f4d1) !important; box-shadow: 0 12px 26px -8px rgba(var(--c-accent-rgb, 189,196,50),0.55) !important; }
+        .swal2-icon.swal2-success [class^='swal2-success-line'] { background-color: var(--c-accent-dark, #7a8500) !important; }
+        .swal2-icon.swal2-success .swal2-success-ring { border-color: rgba(var(--c-accent-rgb, 189,196,50),0.25) !important; }
         .swal2-icon.swal2-warning { color: #b45309 !important; background: #fef3d6 !important; box-shadow: 0 12px 26px -8px rgba(245,158,11,0.5) !important; }
         .swal2-icon.swal2-error { color: #dc2626 !important; background: #fde2e2 !important; box-shadow: 0 12px 26px -8px rgba(239,68,68,0.5) !important; }
         .swal2-icon.swal2-error [class^='swal2-x-mark-line'] { background-color: #dc2626 !important; }
@@ -309,7 +309,7 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
         }
         .swal2-styled:hover { transform: translateY(-1px); }
         .swal2-styled:active { transform: translateY(0); }
-        .swal2-styled:focus-visible { box-shadow: 0 0 0 3px rgba(189,196,50,0.35) !important; }
+        .swal2-styled:focus-visible { box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189,196,50),0.35) !important; }
         .swal2-styled.swal2-confirm { background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432); }
         .swal2-styled.swal2-confirm:hover { filter: brightness(1.3); }
         .swal2-styled.swal2-cancel { background: #f1f5f9; color: #64748b; }
@@ -319,7 +319,7 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
 
         .swal2-close { color: #94a3b8 !important; border-radius: 8px !important; transition: 0.2s !important; }
         .swal2-close:hover { color: var(--c-dark, #1e293b) !important; background: #f1f5f9 !important; }
-        .swal2-timer-progress-bar { background: #bdc432 !important; }
+        .swal2-timer-progress-bar { background: var(--c-accent, #bdc432) !important; }
 
         /* Future text-input popups (Swal.fire({ input: 'text', ... })) */
         .swal2-input, .swal2-textarea, .swal2-select {
@@ -330,8 +330,8 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
             box-shadow: none !important;
         }
         .swal2-input:focus, .swal2-textarea:focus, .swal2-select:focus {
-            border-color: #bdc432 !important;
-            box-shadow: 0 0 0 3px rgba(189,196,50,0.15) !important;
+            border-color: var(--c-accent, #bdc432) !important;
+            box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb, 189,196,50),0.15) !important;
         }
     `;
     document.head.appendChild(s);
@@ -388,13 +388,17 @@ function bxLoader(label) {
 
 function notify(title, text, icon = 'success', timer = 2000) {
     if (typeof Swal !== 'undefined') {
+        // No confirmButtonColor here — showConfirmButton is false anyway,
+        // and the shared .swal2-styled.swal2-confirm rule (injectSwalTheme
+        // below) already themes it correctly for every other call site
+        // that does show one. A hardcoded color here would just override
+        // that with a stale, non-Master-linked green.
         Swal.fire({
             title: title,
             text: text,
             icon: icon,
             timer: timer,
-            showConfirmButton: false,
-            confirmButtonColor: 'rgb(45, 71, 57)'
+            showConfirmButton: false
         });
     }
 }
