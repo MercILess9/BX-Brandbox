@@ -18,6 +18,15 @@
     <link rel="stylesheet" href="b-account.css">
     <style>
         body { padding-bottom: 80px; }
+        /* Safety net against the page itself becoming horizontally
+           draggable — a table or card that's even a pixel wider than its
+           container (easy to hit on mobile Safari specifically) can
+           otherwise drag the WHOLE page sideways instead of just
+           overflowing within its own scroll container. Every table that
+           needs to scroll already has its own overflow-x:auto wrapper
+           (Churn, Trend, Rep, Lead Source) — this just makes sure nothing
+           that slips past that leaks out to the page level. */
+        html, body { overflow-x: hidden; max-width: 100%; }
 
         /* ── Filter bar ── */
         /* top:64px, not 0 — the shared system header (system/header.html)
