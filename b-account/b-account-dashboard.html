@@ -65,7 +65,8 @@
         .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
         @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
         .kpi-card { background: #fff; border: 1px solid #eef2f7; border-radius: 16px; padding: 15px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-        .kpi-label { font-size: 0.65rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+        .kpi-label { font-size: 0.65rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; justify-content: space-between; }
+        .kpi-label-text { display: flex; align-items: center; gap: 7px; }
         .kpi-icon-chip { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; flex-shrink: 0; }
         .kpi-icon-chip.blue   { background: rgba(59,130,246,0.12);  color: #3b82f6; }
         .kpi-icon-chip.accent { background: rgba(var(--c-accent-rgb), 0.2);   color: var(--c-accent-dark); }
@@ -76,13 +77,36 @@
            card, per the "one accent at a time" premium-dashboard note. */
         .kpi-val { font-size: 1.45rem; font-weight: 800; color: var(--c-dark, #1e293b); line-height: 1.1; letter-spacing: -0.5px; }
         .kpi-sub { font-size: 0.8rem; color: #94a3b8; margin-top: 3px; }
-        .kpi-val-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .kpi-status-rows { display: flex; flex-direction: column; gap: 4px; }
+        .kpi-val-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+        .kpi-status-rows { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; }
         .kpi-status-row { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--c-slate); font-weight: 600; }
         .kpi-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .kpi-status-cnt { margin-left: auto; font-weight: 800; color: var(--c-dark, #1e293b); }
+        .kpi-status-cnt { font-weight: 800; color: var(--c-dark, #1e293b); }
         .kpi-badge { display: inline-flex; align-items: center; flex-shrink: 0; font-size: 0.85rem; font-weight: 800; padding: 3px 11px; border-radius: 20px; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); color: #16a34a; text-transform: none; letter-spacing: normal; }
         .kpi-badge.warn { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.35); color: #b45309; }
+        /* Smaller variant, moved up into the label row's own right edge
+           (next to GROSS PROFIT / CHURN) instead of sitting beside the
+           big number — frees that row to pair the headline value with
+           its exact-amount instead. */
+        .kpi-badge-sm { display: inline-flex; align-items: center; flex-shrink: 0; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); color: #16a34a; text-transform: none; letter-spacing: normal; }
+        .kpi-badge-sm.warn { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.35); color: #b45309; }
+        .kpi-sub-inline { font-size: 0.72rem; color: #94a3b8; font-weight: 400; white-space: nowrap; }
+        /* Bottom strip every KPI card now carries — a Net/derived figure
+           (or, for Opportunity, the Active/Churn split) separated from the
+           headline number by a hairline, same vertical rhythm across all
+           4 cards so the row reads as one consistent set. */
+        .kpi-divider { border-top: 1px solid #eef2f7; margin-top: 12px; padding-top: 10px; }
+        .kpi-net-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+        .kpi-net-val { font-size: 0.82rem; font-weight: 800; color: var(--c-dark, #1e293b); white-space: nowrap; }
+        /* Same green/orange already used for the % badges above — not a
+           new color, just reused here so the bottom row's meaning (what's
+           retained vs what's lost) reads at a glance instead of looking
+           identical in weight/color to the neutral headline number above
+           it. */
+        .kpi-net-val.positive { color: #16a34a; }
+        .kpi-net-val.blue { color: #3b82f6; }
+        .kpi-net-val.negative { color: #b45309; }
+        .kpi-net-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; white-space: nowrap; }
 
         /* ── Section header ── */
         .sec-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
@@ -99,16 +123,17 @@
         .dash-card { background: #fff; border: 1px solid #eef2f7; border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
         /* ── BU breakdown cards ── */
-        .bu-card-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .bu-card-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        @media (max-width: 1100px) { .bu-card-row { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 900px) { .bu-card-row { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .bu-card-row { grid-template-columns: 1fr; } }
-        .bu-card { background: #fff; border: 1px solid #eef2f7; border-left: 4px solid; border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .bu-card { background: #fff; border: 1px solid #eef2f7; border-left: 4px solid; border-radius: 16px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .bu-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
         .bu-card-name { font-size: 0.92rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .bu-card-pct-wrap { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
         .bu-card-pct-label { font-size: 0.55rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
         .bu-card-pct { font-size: 0.72rem; font-weight: 800; color: #94a3b8; }
-        .bu-card-amt { font-size: 1.15rem; font-weight: 800; color: var(--c-dark, #1e293b); margin-bottom: 4px; }
+        .bu-card-amt { font-size: 1.02rem; font-weight: 800; color: var(--c-dark, #1e293b); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .bu-card-gp-row { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; color: #16a34a; font-weight: 700; margin-bottom: 3px; }
         .bu-card-gp-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 800; padding: 1px 8px; border-radius: 20px; background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.35); color: #16a34a; }
         .bu-card-deals { font-size: 0.68rem; color: #94a3b8; }
@@ -1359,38 +1384,70 @@ function fmtWhole(n) {
     return Math.round(+n).toLocaleString('en-US') + ' ฿';
 }
 
-function renderKPIs({ totalDeals, grandOrigAmt, grandOrigGP, grandChurnAmt, statusMap }) {
+function renderKPIs({ totalDeals, grandOrigAmt, grandOrigGP, grandChurnAmt, grandChurnGP, statusMap }) {
     const gpP = pctStr(grandOrigGP, grandOrigAmt);
     const churnRate = pctStr(grandChurnAmt, grandOrigAmt + grandChurnAmt);
+    // Amount/GP are gross (every deal at its original value, including
+    // ones that later churned) — Churn is tracked as its own separate
+    // card, never netted out of these two. Showing the net figure here
+    // too (gross minus churn) answers "ok but what's actually left"
+    // without needing to do that subtraction by eye against the Churn
+    // card.
+    const netAmt = grandOrigAmt - grandChurnAmt;
+    const netGP  = grandOrigGP - grandChurnGP;
     const statusRows = [...statusMap.entries()].sort((a, b) => b[1] - a[1]).map(([s, c]) =>
         `<div class="kpi-status-row"><span class="kpi-status-dot" style="background:${statusColor(s)}"></span>${esc(s)}<span class="kpi-status-cnt">${c}</span></div>`
     ).join('');
     document.getElementById('kpiRow').innerHTML = `
         <div class="kpi-card">
-            <div class="kpi-label"><span class="kpi-icon-chip blue"><i class="bi bi-currency-exchange"></i></span> Amount (DV)</div>
-            <div class="kpi-val">${fmtKPI(grandOrigAmt)}</div>
-            <div class="kpi-sub">${fmtWhole(grandOrigAmt)}</div>
+            <div class="kpi-label"><span class="kpi-label-text"><span class="kpi-icon-chip blue"><i class="bi bi-currency-exchange"></i></span> Amount (DV)</span></div>
+            <div class="kpi-val-row">
+                <div class="kpi-val">${fmtKPI(grandOrigAmt)}</div>
+                <div class="kpi-sub-inline">${fmtWhole(grandOrigAmt)}</div>
+            </div>
+            <div class="kpi-divider">
+                <div class="kpi-net-row">
+                    <span class="kpi-net-label">Net Amount</span>
+                    <span class="kpi-net-val blue">${fmtWhole(netAmt)}</span>
+                </div>
+            </div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-label"><span class="kpi-icon-chip green"><i class="bi bi-graph-up-arrow"></i></span> Gross Profit</div>
+            <div class="kpi-label">
+                <span class="kpi-label-text"><span class="kpi-icon-chip green"><i class="bi bi-graph-up-arrow"></i></span> Gross Profit</span>
+                ${gpP ? `<span class="kpi-badge-sm">${gpP}</span>` : ''}
+            </div>
             <div class="kpi-val-row">
                 <div class="kpi-val">${fmtKPI(grandOrigGP)}</div>
-                ${gpP ? `<span class="kpi-badge">${gpP}</span>` : ''}
+                <div class="kpi-sub-inline">${fmtWhole(grandOrigGP)}</div>
             </div>
-            <div class="kpi-sub">${fmtWhole(grandOrigGP)}</div>
+            <div class="kpi-divider">
+                <div class="kpi-net-row">
+                    <span class="kpi-net-label">Net GP</span>
+                    <span class="kpi-net-val positive">${fmtWhole(netGP)}</span>
+                </div>
+            </div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-label"><span class="kpi-icon-chip warn"><i class="bi bi-arrow-down-circle-fill"></i></span> Churn</div>
+            <div class="kpi-label">
+                <span class="kpi-label-text"><span class="kpi-icon-chip warn"><i class="bi bi-arrow-down-circle-fill"></i></span> Churn</span>
+                ${churnRate ? `<span class="kpi-badge-sm warn">${churnRate}</span>` : ''}
+            </div>
             <div class="kpi-val-row">
                 <div class="kpi-val">${fmtKPI(grandChurnAmt)}</div>
-                ${churnRate ? `<span class="kpi-badge warn">${churnRate}</span>` : ''}
+                <div class="kpi-sub-inline">${fmtWhole(grandChurnAmt)}</div>
             </div>
-            <div class="kpi-sub">${fmtWhole(grandChurnAmt)}</div>
+            <div class="kpi-divider">
+                <div class="kpi-net-row">
+                    <span class="kpi-net-label">Lost GP</span>
+                    <span class="kpi-net-val negative">${fmtWhole(grandChurnGP)}</span>
+                </div>
+            </div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-label"><span class="kpi-icon-chip accent"><i class="bi bi-briefcase-fill"></i></span> Opportunity</div>
-            <div class="kpi-val-row">
-                <div class="kpi-val">${totalDeals}</div>
+            <div class="kpi-label"><span class="kpi-label-text"><span class="kpi-icon-chip accent"><i class="bi bi-briefcase-fill"></i></span> Opportunity</span></div>
+            <div class="kpi-val">${totalDeals}</div>
+            <div class="kpi-divider">
                 <div class="kpi-status-rows">${statusRows}</div>
             </div>
         </div>
