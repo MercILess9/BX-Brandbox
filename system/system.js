@@ -646,6 +646,28 @@ async function renderSystemUI(config) {
             if (!profileMenu.contains(e.target) && e.target !== avatarBtn) profileMenu.classList.remove('open');
         });
     }
+
+    // Mobile nav dropdown (<768px) — the hamburger button is CSS-hidden
+    // at desktop width, but still wired up unconditionally here since
+    // whether it's visible can change anytime via window resize.
+    const hamburgerBtn = document.getElementById('sys-hamburger-btn');
+    const navMenu = document.getElementById('sys-nav-inject');
+    if (hamburgerBtn && navMenu) {
+        hamburgerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navMenu.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && e.target !== hamburgerBtn && !hamburgerBtn.contains(e.target)) navMenu.classList.remove('open');
+        });
+        // A resize past the mobile breakpoint (device rotation, or a
+        // desktop window un-maximized then maximized again) shouldn't
+        // leave the dropdown stuck open once the hamburger itself has
+        // disappeared and the centered desktop nav takes over again.
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) navMenu.classList.remove('open');
+        });
+    }
 }
 
 function handleEditProfile() {
