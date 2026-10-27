@@ -137,6 +137,17 @@
         .sec-hd-title-main { font-size: 1.05rem; display: inline-flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: normal; }
         .sec-hd-sub { font-size: 0.68rem; color: #94a3b8; margin-left: auto; }
         .sec-block { margin-bottom: 34px; }
+        /* On a narrow phone, the title + period badge + "Last Update" text
+           together don't fit one row — .sec-hd has no flex-wrap, so instead
+           of dropping the badge/updated text to their own line, only the
+           TITLE's own text wraps mid-word inside its squeezed cell ("B-" /
+           "ACCOUNT" / "Dashboard"). Letting the whole row wrap fixes it:
+           title gets its own full-width line, badge + updated share the
+           next one. */
+        @media (max-width: 560px) {
+            .sec-hd { flex-wrap: wrap; row-gap: 6px; }
+            .sec-hd-title-main { white-space: nowrap; flex: 1 1 100%; }
+        }
 
         /* ── Cards ── */
         .dash-card { background: #fff; border: 1px solid #eef2f7; border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
