@@ -1126,6 +1126,12 @@ const BQuestApp = (() => {
         async openModal(taskId = null, workData = []) {
             const form = el('b-quest-modal-form');
             form.reset(); form.classList.remove('was-validated');
+            // form.reset() does NOT clear a type="hidden" input: setting
+            // .value on one writes its default attribute, which reset()
+            // restores to. So after opening any task in Edit, the next "New"
+            // kept that task's id, submitForm saw isEdit=true and overwrote
+            // the old task with the new data instead of inserting.
+            el('b-quest-modal-id').value = '';
             State.currentData = null;
             State.currentRoleRows = {};
             await Promise.all([loadVisibleRoles(), BQuestService.loadStatuses(), BQuestService.loadWorkdayWeight()]);
