@@ -1744,9 +1744,9 @@
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'link', '${l.slot}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'link', '${l.slot}')">
                 <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
-                <span class="link-slot-tag">Link ${l.slot}</span>
+                <span class="link-slot-tag">Link ${l.pos}</span>
                 <input class="cfg-name-input cfg-col-name ${dup.has(l.slot) ? 'is-invalid' : ''}" maxlength="${BQ_LINK_LABEL_MAX}"
-                       placeholder="Link ${l.slot}" value="${esc(l.label)}" oninput="onLinkField(${l.slot}, 'label', this.value)">
+                       placeholder="Link ${l.pos}" value="${esc(l.label)}" oninput="onLinkField(${l.slot}, 'label', this.value)">
                 <div class="cfg-mini-toggle-wrap cfg-col-toggle">
                     <label class="bq-toggle small">
                         <input type="checkbox" ${l.active ? 'checked' : ''} onchange="onLinkField(${l.slot}, 'active', this.checked)">
@@ -1804,7 +1804,7 @@
                 if (!res.isConfirmed) return false;
             }
         }
-        linkChanges.quest_links = list; // persist the normalized (trimmed) form
+        linkChanges.quest_links = list.map(({ slot, label, active }) => ({ slot, label, active })); // normalized (trimmed), without derived pos
         return true;
     }
 

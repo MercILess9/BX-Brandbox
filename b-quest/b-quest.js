@@ -377,13 +377,16 @@ function normalizeQuestLinks(value) {
     [1, 2, 3].forEach(slot => {
         if (!out.some(o => o.slot === slot)) out.push({ slot, label: slot === 1 && !saved.length ? 'Link' : '', active: slot === 1 && !saved.length });
     });
+    // pos = 1-based display position. Derived, never saved: users see
+    // "Link 1/2/3" by position, while slot stays the fixed data column.
+    out.forEach((o, i) => { o.pos = i + 1; });
     return out;
 }
 
-// Label actually shown — an empty one falls back to "Link N" so two blank
-// slots never render as two identical buttons.
+// Label actually shown — an empty one falls back to "Link N" (by display
+// position) so two blank slots never render as two identical buttons.
 function questLinkLabel(cfgSlot) {
-    return cfgSlot.label || `Link ${cfgSlot.slot}`;
+    return cfgSlot.label || `Link ${cfgSlot.pos}`;
 }
 
 // Loaded once per page load (same caching rule as other modal helper data).
