@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-QUEST | Setting</title>
 
@@ -501,6 +502,79 @@
         .cleanup-merge-btn { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: 0.15s; }
         .cleanup-merge-btn:hover { background: #0f172a; }
 
+        /* Phone-only pieces — hidden at desktop width. */
+        .cfg-move, .section-fold-chevron, .work-role-tabs { display: none; }
+
+        /* ── Phone / portrait tablet (same 992px cut as List/Assignment) ──
+           One column: the Role/Status/Type carousel stacks, sections fold
+           to their header (setupCollapsibleSections), rows reorder with
+           ▲/▼ (moveBtns) instead of drag, and the Work List shows one role
+           at a time behind tabs (renderWork). */
+        @media (max-width: 991.98px) {
+            .settings-wrapper { padding: 16px 16px 140px; }
+            .page-header { margin-bottom: 14px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .settings-tabnav { gap: 6px; margin-bottom: 14px; }
+            .settings-tab { flex: 1; justify-content: center; padding: 10px 6px; }
+
+            .cfg-carousel-wrap { margin-bottom: 0; }
+            .cfg-carousel-wrap::before, .cfg-carousel-wrap::after { display: none; }
+            .cfg-3col-page-grid { flex-direction: column; gap: 0; overflow-x: visible; padding-bottom: 0; }
+            .cfg-3col-page-grid .section { flex: none; margin-bottom: 12px; }
+            .cfg-half-row { flex-direction: column; gap: 12px; margin-bottom: 12px; }
+
+            .section { border-radius: 16px; margin-bottom: 12px; }
+            /* Chevron is pinned top-right (not a flex item) — headers with
+               their own wrapping controls (Work List toggles, Include
+               Holidays) would otherwise push it onto a line of its own. */
+            .section-header { position: relative; flex-wrap: wrap; gap: 8px; padding: 12px 38px 12px 14px; min-height: 52px; cursor: pointer; }
+            .section-header > .section-title { margin-right: auto; }
+            .section-body { padding: 12px 14px; }
+            .section-fold-chevron { display: block; position: absolute; right: 14px; top: 17px; color: #94a3b8; transition: transform 0.2s; }
+            .section.is-folded > .section-header { border-bottom: none; }
+            .section.is-folded > .section-body { display: none; }
+            .section.is-folded .section-fold-chevron { transform: rotate(-90deg); }
+
+            .cfg-row { gap: 6px; padding: 6px 2px; }
+            .cfg-header-row { gap: 6px; }
+            .cfg-col-drag { width: 24px; }
+            .cfg-col-color { width: 26px; }
+            .cfg-col-icon { width: 34px; }
+            .cfg-col-cap { width: 52px; }
+            .cfg-col-toggle { width: 42px; }
+            .cfg-col-star { width: 30px; }
+            .cfg-name-input { min-width: 0; padding: 6px 8px; }
+            .cfg-drag-handle > .bi-grip-vertical, .work-drag-handle > .bi-grip-vertical { display: none; }
+            .cfg-move { display: flex; flex-direction: column; }
+            .cfg-move button { width: 24px; height: 18px; padding: 0; border: none; background: none; color: #94a3b8; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+            .cfg-move button:active { background: var(--c-accent-light); color: var(--c-accent-dark); }
+            .work-drag-handle .cfg-move button { width: 20px; }
+
+            /* Role has the most columns — name keeps line one (with move,
+               color, icon); Max Cap / Active / delete drop to a labelled
+               second line, since the header row is hidden here. */
+            #section-roles .cfg-header-row { display: none; }
+            #role-list .cfg-row { flex-wrap: wrap; row-gap: 4px; }
+            #role-list .cfg-col-name { flex: 1 1 calc(100% - 110px); }
+            #role-list .cfg-col-cap, #role-list .cfg-col-toggle { width: auto; gap: 6px; }
+            #role-list .cfg-col-cap { margin-left: 30px; }
+            #role-list .cfg-col-toggle { margin-left: 12px; }
+            #role-list .cfg-col-cap::before, #role-list .cfg-col-toggle::before { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+            #role-list .cfg-col-cap::before { content: 'Max Cap'; }
+            #role-list .cfg-col-toggle::before { content: 'Active'; }
+            #role-list .cfg-col-trash { margin-left: auto; }
+
+            .work-config-toggles { margin-left: 0; width: 100%; }
+            .work-role-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; }
+            .work-role-tabs::-webkit-scrollbar { display: none; }
+            .work-role-tab { flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--c-border); background: #fff; font-family: inherit; font-size: 0.78rem; font-weight: 700; color: var(--c-slate); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+            #workCarouselWrap::before, #workCarouselWrap::after { display: none; }
+            .work-cols { display: block; overflow: visible; padding-bottom: 0; }
+            .work-col { display: none; }
+            .work-col.is-tab-active { display: block; }
+            .work-col-inner { max-height: none; padding: 6px 8px; }
+            .work-col-header { padding: 10px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -591,6 +665,8 @@
             <div class="work-config-toggles" id="workConfigToggles"></div>
         </div>
         <div class="section-body">
+            <!-- Phone only (CSS): one role at a time instead of a side-scrolling carousel, filled by renderWork() -->
+            <div class="work-role-tabs" id="work-role-tabs"></div>
             <div class="cfg-carousel-wrap" id="workCarouselWrap">
                 <div class="work-cols thin-scroll" id="work-cols"></div>
             </div>
@@ -907,6 +983,7 @@
         guardPermission();
         saveBar = createSaveBar({ label: 'B-Quest Settings', onSave: saveAll, onCancel: cancelAllChanges, onUndo: undoLastChange });
         setupFilterDefaultMultiSelects();
+        setupCollapsibleSections();
         document.getElementById('fdRoleSegWrap')?.addEventListener('scroll', () => fdRoleSeg.updateFade());
         await Promise.all([loadRoles(), loadStatuses(), loadTypes(), loadAllProfiles(), loadConfig(), loadDepartments(), loadNameCleanup()]);
         renderFilterDefaultsSection(); // needs originalRoles/Statuses/Types + originalConfig, all settled by the Promise.all above
@@ -918,6 +995,25 @@
         // strings on a .html-suffixed request) so it can land directly on
         // this in-page tab instead of always defaulting to Setting.
         if (new URLSearchParams(location.search).get('tab') === 'cleanup') switchBqsTab('cleanup');
+    }
+
+    // Phone: every Setting-tab section folds to its header so the page
+    // isn't one very long scroll — only Role starts open. The classes are
+    // set at any width but only the phone CSS acts on them, and a header
+    // tap only toggles on a phone, so desktop is untouched. Taps on the
+    // header's own controls (Add, A-Z, info, toggles) keep working.
+    const PHONE_MQ = window.matchMedia('(max-width: 991.98px)');
+    function setupCollapsibleSections() {
+        document.querySelectorAll('#bqs-tab-config .section').forEach(section => {
+            const header = section.querySelector(':scope > .section-header');
+            if (!header) return;
+            header.insertAdjacentHTML('beforeend', '<i class="bi bi-chevron-down section-fold-chevron"></i>');
+            if (section.id !== 'section-roles') section.classList.add('is-folded');
+            header.addEventListener('click', e => {
+                if (!PHONE_MQ.matches || e.target.closest('button, input, label, select, a')) return;
+                section.classList.toggle('is-folded');
+            });
+        });
     }
 
     // Generic left/right scroll-fade hint — shared by the Role/Status/Type
@@ -1153,7 +1249,7 @@
                  ondragstart="dragStart(event, 'role', '${r.id}')" ondragend="dragEnd(event)"
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'role', '${r.id}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'role', '${r.id}')">
-                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i>${moveBtns('role', r.id)}</div>
                 <div class="cfg-col-color"><div class="cfg-swatch" style="background:${r.color || '#94a3b8'}" onclick="openColorPicker(this, { getValue: () => roleBuffer().find(x => x.id === '${r.id}')?.color || '#94a3b8', onSelect: (c) => onRoleField('${r.id}', 'color', c) })"></div></div>
                 <div class="cfg-col-icon"><div class="cfg-icon-swatch" onclick="openIconPicker(event, 'role', '${r.id}')"><i class="bi ${r.icon || 'bi-person-workspace'}"></i></div></div>
                 <input class="cfg-name-input cfg-col-name" value="${esc(r.name)}" oninput="onRoleField('${r.id}', 'name', this.value)">
@@ -1266,7 +1362,7 @@
                  ondragstart="dragStart(event, 'status', '${s.id}')" ondragend="dragEnd(event)"
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'status', '${s.id}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'status', '${s.id}')">
-                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i>${moveBtns('status', s.id)}</div>
                 <div class="cfg-col-color"><div class="cfg-swatch" style="background:${s.color || '#94a3b8'}" onclick="openColorPicker(this, { getValue: () => statusBuffer().find(x => x.id === '${s.id}')?.color || '#94a3b8', onSelect: (c) => onStatusField('${s.id}', 'color', c) })"></div></div>
                 <input class="cfg-name-input cfg-col-name" value="${esc(s.name)}" oninput="onStatusField('${s.id}', 'name', this.value)">
                 <div class="cfg-col-star">
@@ -1351,7 +1447,7 @@
                  ondragstart="dragStart(event, 'type', '${t.id}')" ondragend="dragEnd(event)"
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'type', '${t.id}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'type', '${t.id}')">
-                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i>${moveBtns('type', t.id)}</div>
                 <input class="cfg-name-input cfg-col-name" value="${esc(t.name)}" oninput="onTypeField('${t.id}', 'name', this.value)">
                 <div class="cfg-mini-toggle-wrap cfg-col-toggle">
                     <label class="bq-toggle small">
@@ -1444,29 +1540,60 @@
         e.currentTarget.classList.remove('drag-over');
         if (!dragState || dragState.kind !== kind || dragState.id === id) { dragState = null; return; }
         if (kind === 'work' && dragState.roleId !== roleId) { dragState = null; return; }
+        applyReorder(kind, dragState.id, id, roleId);
+        dragState = null;
+    }
 
+    // Each list in the order it's displayed — what a drop or a ▲/▼ move
+    // reorders. Work rows render sorted by sort_order within their role.
+    function reorderableList(kind, roleId) {
+        if (kind === 'role') return roleBuffer();
+        if (kind === 'status') return statusBuffer();
+        if (kind === 'type') return typeBuffer();
+        if (kind === 'work') return workBuffer().filter(w => w.role_id === roleId).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
+        if (kind === 'link') return linkBuffer().map(l => ({ ...l, id: String(l.slot) }));
+        return [];
+    }
+
+    // Moves fromId to toId's position and stages the new order — shared by
+    // drag-and-drop and the phone ▲/▼ buttons.
+    function applyReorder(kind, fromId, toId, roleId) {
+        const list = reorderList(reorderableList(kind, roleId), fromId, toId);
         if (kind === 'role') {
-            const list = reorderList(roleBuffer(), dragState.id, id);
             list.forEach((r, i) => { (roleChanges[r.id] ||= {}).sort_order = i + 1; });
             markDirty('section-roles'); renderRoles();
         } else if (kind === 'status') {
-            const list = reorderList(statusBuffer(), dragState.id, id);
             list.forEach((s, i) => { (statusChanges[s.id] ||= {}).sort_order = i + 1; });
             markDirty('section-statuses'); renderStatuses();
         } else if (kind === 'type') {
-            const list = reorderList(typeBuffer(), dragState.id, id);
             list.forEach((t, i) => { (typeChanges[t.id] ||= {}).sort_order = i + 1; });
             markDirty('section-types'); renderTypes();
         } else if (kind === 'work') {
-            const list = reorderList(workBuffer().filter(w => w.role_id === roleId), dragState.id, id);
             list.forEach((w, i) => { (workChanges[w.id] ||= {}).sort_order = i + 1; });
             markDirty('section-worklist'); renderWork();
         } else if (kind === 'link') {
-            const list = reorderList(linkBuffer().map(l => ({ ...l, id: String(l.slot) })), dragState.id, id);
             linkChanges.quest_links = list.map(({ slot, label, active }) => ({ slot, label, active }));
             markDirty('section-links'); renderLinksSection();
         }
-        dragState = null;
+    }
+
+    // ▲/▼ pair inside each row's drag handle. HTML5 drag-and-drop doesn't
+    // work with a finger on iOS, so the phone CSS hides the grip and shows
+    // these instead; desktop keeps dragging and never sees them.
+    function moveBtns(kind, id, roleId = '') {
+        const args = `'${kind}', '${id}', '${roleId}'`;
+        return `<span class="cfg-move">
+            <button type="button" onclick="moveRow(${args}, -1)" title="Move up"><i class="bi bi-chevron-up"></i></button>
+            <button type="button" onclick="moveRow(${args}, 1)" title="Move down"><i class="bi bi-chevron-down"></i></button>
+        </span>`;
+    }
+
+    function moveRow(kind, id, roleId, dir) {
+        const list = reorderableList(kind, roleId || undefined);
+        const idx = list.findIndex(x => x.id === id);
+        const neighbor = list[idx + dir];
+        if (idx === -1 || !neighbor) return;
+        applyReorder(kind, id, neighbor.id, roleId || undefined);
     }
 
     // One-click "reset to alphabetical" — reassigns sort_order by name,
@@ -1743,7 +1870,7 @@
                  ondragstart="dragStart(event, 'link', '${l.slot}')" ondragend="dragEnd(event)"
                  ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'link', '${l.slot}')" ondragleave="dragLeaveRow(event)"
                  ondrop="dropOnRow(event, 'link', '${l.slot}')">
-                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i>${moveBtns('link', String(l.slot))}</div>
                 <span class="link-slot-tag">Link ${l.pos}</span>
                 <input class="cfg-name-input cfg-col-name ${dup.has(l.slot) ? 'is-invalid' : ''}" maxlength="${BQ_LINK_LABEL_MAX}"
                        placeholder="Link ${l.pos}" value="${esc(l.label)}" oninput="onLinkField(${l.slot}, 'label', this.value)">
@@ -2475,6 +2602,9 @@
 
     let workDeletes = new Set();
 
+    let workTabRole = null; // Work List tab shown on phones
+    function setWorkTab(roleId) { workTabRole = roleId; renderWork(); }
+
     function renderWork() {
         const container = document.getElementById('work-cols');
         const roles = roleBuffer().filter(r => r.active !== false && !r._deleted);
@@ -2486,14 +2616,25 @@
         else if (roles.length === 2) container.classList.add('count-2');
         if (!dayOn) container.classList.add('cfg-no-day');
         if (!maxOn) container.classList.add('cfg-no-max');
-        if (!roles.length) { container.innerHTML = '<div class="work-empty">Add a role above first.</div>'; return; }
+        if (!roles.length) {
+            container.innerHTML = '<div class="work-empty">Add a role above first.</div>';
+            document.getElementById('work-role-tabs').innerHTML = '';
+            return;
+        }
+        // Phone shows one role column at a time (CSS); keep the picked
+        // tab across re-renders, falling back to the first role.
+        if (!roles.some(r => r.id === workTabRole)) workTabRole = roles[0].id;
+        document.getElementById('work-role-tabs').innerHTML = roles.map(r => {
+            const on = r.id === workTabRole;
+            return `<button type="button" class="work-role-tab ${on ? 'active' : ''}" style="${on ? `background:${r.color}22;border-color:${r.color};color:${r.color}` : ''}" onclick="setWorkTab('${r.id}')"><i class="bi ${r.icon || 'bi-person-workspace'}"></i> ${esc(r.name) || 'Untitled'}</button>`;
+        }).join('');
 
         const buf = workBuffer();
 
         container.innerHTML = roles.map(r => {
             const items = buf.filter(w => w.role_id === r.id).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
             return `
-            <div class="work-col">
+            <div class="work-col ${r.id === workTabRole ? 'is-tab-active' : ''}">
                 <div class="work-col-header" style="background:${r.color}22; border-color:${r.color}55;">
                     <div class="work-col-title-group">
                         <div class="work-col-title" style="color:${r.color}"><i class="bi ${r.icon || 'bi-person-workspace'}"></i> ${esc(r.name) || 'Untitled'}</div>
@@ -2514,7 +2655,7 @@
                              ondragstart="dragStart(event, 'work', '${w.id}', '${r.id}')" ondragend="dragEnd(event)"
                              ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'work', '${w.id}', '${r.id}')" ondragleave="dragLeaveRow(event)"
                              ondrop="dropOnRow(event, 'work', '${w.id}', '${r.id}')">
-                            <div class="work-drag-handle"><i class="bi bi-grip-vertical"></i></div>
+                            <div class="work-drag-handle"><i class="bi bi-grip-vertical"></i>${moveBtns('work', w.id, r.id)}</div>
                             <input class="work-input" value="${esc(w.work)}" oninput="onWorkField('${w.id}', 'work', this.value)">
                             <input class="work-weight" type="number" step="0.01" value="${w.weight ?? ''}" oninput="onWorkField('${w.id}', 'weight', this.value === '' ? null : parseFloat(this.value))">
                             ${dayOn ? `<input class="work-weight" type="text" value="${esc(w.day ?? 1)}" oninput="onWorkField('${w.id}', 'day', this.value)">` : ''}
