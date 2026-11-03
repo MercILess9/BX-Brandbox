@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-ACCOUNT | Setting</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,7 +13,7 @@
     <script src="/system/color-picker.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
-    <link rel="stylesheet" href="b-account.css">
+    <link rel="stylesheet" href="b-account.css?v=2">
     <style>
         /* Cross-document View Transitions — clicking the Setting/Member tab
            (a real <a href> navigation between two separate pages, not a JS
@@ -128,6 +129,44 @@
         .bq-toggle input:checked + .bq-slider { background: var(--c-accent); }
         .bq-toggle input:checked + .bq-slider:before { transform: translateX(15px); }
         .bq-toggle.small input:checked + .bq-slider:before { transform: translateX(12px); }
+
+        /* Phone-only pieces — hidden at desktop width. */
+        .cfg-move, .section-fold-chevron { display: none; }
+
+        /* ── Phone / portrait tablet — same pattern as B-Quest Settings:
+           the carousel and standalone lists stack to one column, each list
+           folds to its header (toggleCfgFold), rows reorder with ▲/▼
+           (moveBtns) instead of drag. ── */
+        @media (max-width: 991.98px) {
+            .settings-wrapper { padding: 16px 16px 140px; }
+            .page-header { margin-bottom: 14px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .settings-tabnav { gap: 6px; margin-bottom: 14px; }
+            .settings-tab { flex: 1; justify-content: center; padding: 10px 6px; }
+
+            .cfg-carousel-wrap { margin-bottom: 0; }
+            .cfg-carousel-wrap::before, .cfg-carousel-wrap::after { display: none; }
+            .cfg-3col-page-grid { flex-direction: column; gap: 0; overflow-x: visible; padding-bottom: 0; }
+            .cfg-3col-page-grid .section, #cfgStandalone .section { flex: none; width: auto; margin-bottom: 12px; }
+            #cfgStandalone { display: block; }
+
+            .section { border-radius: 16px; margin-bottom: 12px; }
+            .section-header { position: relative; flex-wrap: wrap; gap: 8px; padding: 12px 38px 12px 14px; min-height: 52px; cursor: pointer; }
+            .section-header > .section-title { margin-right: auto; }
+            .section-body { padding: 12px 14px; }
+            .section-fold-chevron { display: block; position: absolute; right: 14px; top: 17px; color: #94a3b8; transition: transform 0.2s; }
+            .section.is-folded > .section-header { border-bottom: none; }
+            .section.is-folded > .section-body { display: none; }
+            .section.is-folded .section-fold-chevron { transform: rotate(-90deg); }
+
+            .cfg-row, .cfg-header-row { gap: 6px; }
+            .cfg-col-drag { width: 24px; }
+            .cfg-name-input { min-width: 0; }
+            .cfg-drag-handle > .bi-grip-vertical { display: none; }
+            .cfg-move { display: flex; flex-direction: column; }
+            .cfg-move button { width: 24px; height: 18px; padding: 0; border: none; background: none; color: #94a3b8; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+            .cfg-move button:active { background: var(--c-accent-light); color: var(--c-accent-dark); }
+        }
     </style>
 </head>
 <body>
@@ -225,11 +264,12 @@
             <span class="cfg-col-name">${esc(group.label)}</span>
             ${group.hasToggle ? '<span class="cfg-col-toggle">Active</span>' : ''}
             <span class="cfg-col-trash"></span>`;
-        return `<div class="section" id="section-${group.key}">
-            <div class="section-header">
+        return `<div class="section ${cfgOpen.has(group.key) ? '' : 'is-folded'}" id="section-${group.key}">
+            <div class="section-header" onclick="toggleCfgFold(event, '${group.key}')">
                 <div class="section-title"><i class="bi ${group.icon}"></i> ${esc(group.label)} <span class="cfg-count-badge" id="cfgCount-${group.key}"></span> <span class="dirty-dot"></span></div>
                 <button class="cfg-btn-sort hover-scale" onclick="sortAlphaCfg('${group.key}')" title="Sort A-Z"><i class="bi bi-sort-alpha-down"></i></button>
                 <button class="cfg-btn-add hover-scale" onclick="addCfgItem('${group.key}')"><i class="bi bi-plus-lg"></i> Add</button>
+                <i class="bi bi-chevron-down section-fold-chevron"></i>
             </div>
             <div class="section-body">
                 <div class="cfg-header-row">${headerCols}</div>
@@ -244,7 +284,7 @@
              ondragstart="dragStart(event,'${group.key}','${r._ck}')" ondragend="dragEnd(event)"
              ondragover="event.preventDefault()" ondragenter="dragEnterRow(event,'${group.key}','${r._ck}')" ondragleave="dragLeaveRow(event)"
              ondrop="dropOnRow(event,'${group.key}','${r._ck}')">
-            <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+            <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i>${r._deleted ? '' : moveBtns(group.key, r._ck)}</div>
             ${group.hasColor ? `<div class="cfg-col-color"><div class="cfg-swatch" style="background:${r.color || '#94a3b8'}" onclick="openColorPicker(this, { getValue: () => cfgBuffer('${group.key}').find(x => x._ck === '${r._ck}')?.color || '#94a3b8', onSelect: (c) => onCfgField('${group.key}','${r._ck}','color', c) })"></div></div>` : ''}
             <input class="cfg-name-input cfg-col-name" value="${esc(r.value || '')}" oninput="onCfgField('${group.key}','${r._ck}','value', this.value)">
             ${group.hasToggle ? `<div class="cfg-mini-toggle-wrap cfg-col-toggle">
@@ -373,11 +413,42 @@
         e.preventDefault();
         e.currentTarget.classList.remove('drag-over');
         if (!dragState || dragState.key !== key || dragState.ck === ck) { dragState = null; return; }
-        const list = reorderList(cfgBuffer(key), dragState.ck, ck);
+        cfgReorder(key, dragState.ck, ck);
+        dragState = null;
+    }
+
+    // Shared by drag-and-drop and the phone ▲/▼ buttons (moveCfg).
+    function cfgReorder(key, fromCk, toCk) {
+        const list = reorderList(cfgBuffer(key), fromCk, toCk);
         list.forEach((r, i) => { (cfgChanges[key][r._ck] ||= {}).sort_order = i + 1; });
         markDirty(key);
         renderCfgGroup(key);
-        dragState = null;
+    }
+
+    // ▲/▼ pair inside each row's drag handle. HTML5 drag-and-drop doesn't
+    // work with a finger on iOS, so the phone CSS hides the grip and shows
+    // these instead; desktop keeps dragging and never sees them.
+    function moveBtns(key, ck) {
+        return `<span class="cfg-move">
+            <button type="button" onclick="moveCfg('${key}', '${ck}', -1)" title="Move up"><i class="bi bi-chevron-up"></i></button>
+            <button type="button" onclick="moveCfg('${key}', '${ck}', 1)" title="Move down"><i class="bi bi-chevron-down"></i></button>
+        </span>`;
+    }
+
+    function moveCfg(key, ck, dir) {
+        const list = cfgBuffer(key);
+        const neighbor = list[list.findIndex(r => r._ck === ck) + dir];
+        if (neighbor) cfgReorder(key, ck, neighbor._ck);
+    }
+
+    // Phone: each list folds to its header so the page isn't one long
+    // scroll — only Status starts open; open state survives re-renders.
+    // Header taps on its own buttons (A-Z, Add) don't fold.
+    const cfgOpen = new Set(['status']);
+    function toggleCfgFold(e, key) {
+        if (!window.matchMedia('(max-width: 991.98px)').matches || e.target.closest('button, input, label, a')) return;
+        if (cfgOpen.has(key)) cfgOpen.delete(key); else cfgOpen.add(key);
+        document.getElementById(`section-${key}`)?.classList.toggle('is-folded', !cfgOpen.has(key));
     }
 
     // One-click "reset to alphabetical" — reassigns sort_order by value,

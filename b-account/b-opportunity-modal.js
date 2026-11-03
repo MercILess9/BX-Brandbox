@@ -308,6 +308,41 @@ const B_OPP_MODAL_HTML = `
     .bopp-original-wrap { border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; position: relative; margin-bottom: 16px; }
     .bopp-original-label { position: absolute; top: -10px; left: 14px; background: #f8fafc; padding: 0 8px; font-size: 0.68rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; }
     .bopp-qt-card--disabled { pointer-events: none; opacity: 0.6; }
+
+    /* ── Phone: full screen like B-Quest's modal — header and footer
+       pinned (the body already scrolls on its own), the 70/30 split
+       stacks to one column, header totals wrap under the title. QT item
+       tables keep their sideways scroll inside .bopp-item-wrap — too many
+       columns (item, qty, price, cost, GP…) to fit 375px any other way
+       without a card-per-item rewrite. ── */
+    @media (max-width: 767.98px) {
+        #b-opp-modal .modal-dialog { margin: 0; width: 100%; max-width: none !important; height: 100%; min-height: 100%; align-items: stretch; }
+        #b-opp-modal .modal-content { height: 100% !important; max-height: none !important; border-radius: 0; }
+        #b-opp-modal .bopp-header { flex-wrap: wrap; padding: 10px 16px; gap: 8px; }
+        #b-opp-modal .bopp-header-left { flex-wrap: wrap; }
+        #b-opp-modal .bopp-header-right { width: 100%; flex-wrap: wrap; justify-content: space-between; }
+        #b-opp-modal .bopp-hdr-totals, #b-opp-modal .bopp-hdr-remain-zone { flex-wrap: wrap; gap: 10px; }
+        #b-opp-modal .bopp-body { padding: 14px 16px 10px; -webkit-overflow-scrolling: touch; }
+        #b-opp-modal .bopp-outer { grid-template-columns: minmax(0, 1fr); }
+        #b-opp-modal .bopp-card { padding: 14px; }
+        /* The left card's side-by-side rows (Account | Company, links |
+           Remark) are inline-styled flex rows — stack them. */
+        #b-opp-modal .bopp-left-card div[style^="display:flex"] { flex-direction: column; }
+        #b-opp-modal .bq-inp { height: 40px; }
+        #b-opp-modal .bopp-ilbl { width: 92px; }
+        #b-opp-modal .bopp-iinp, #b-opp-modal .bopp-picker-trigger { height: 40px; font-size: 16px; }
+        #b-opp-modal .bq-ta, #b-opp-modal .bq-inp, #b-opp-modal .bopp-qt-num { font-size: 16px; }
+        #b-opp-modal .bq-ta { height: auto; }
+        #b-opp-modal .bopp-qt-totals { margin-left: 0; width: 100%; justify-content: flex-end; }
+        #b-opp-modal .bopp-qt-foot { flex-wrap: wrap; gap: 8px; }
+        #b-opp-modal .bopp-btn-add-qt { width: 100%; }
+        #b-opp-modal .bopp-footer { flex-wrap: wrap; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+        #b-opp-modal .bopp-footer > div[style="flex:1"] { display: none; }
+        #b-opp-modal .bopp-btn-save { flex: 1; justify-content: center; height: 44px; }
+        #b-opp-modal .bopp-btn-del, #b-opp-modal .bopp-btn-undo { height: 44px; }
+        #b-opp-modal .bopp-overlay { align-items: flex-end; }
+        #b-opp-modal .bopp-ov-card { width: 100%; height: 88dvh; max-height: none; border-radius: 22px 22px 0 0; padding: 18px 16px calc(12px + env(safe-area-inset-bottom)); }
+    }
 </style>
 
 <div class="modal fade" id="b-opp-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">

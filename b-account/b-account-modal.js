@@ -108,6 +108,28 @@ const B_ACCOUNT_MODAL_HTML = `
     .btn-bac-save:hover { background: #0f172a; transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
     .btn-bac-save:active { transform: translateY(0) scale(0.97); box-shadow: none; transition-duration: 0.1s; }
     .btn-bac-save:disabled { opacity: 0.6; pointer-events: none; }
+
+    /* ── Phone: full screen like B-Quest's modal — header and Save footer
+       pinned, only the form scrolls, everything one column. 16px inputs
+       match the page viewport's no-zoom setup. ── */
+    @media (max-width: 767.98px) {
+        #b-account-modal .modal-dialog { margin: 0; width: 100%; max-width: none !important; height: 100%; min-height: 100%; align-items: stretch; }
+        #b-account-modal .modal-content { height: 100%; border-radius: 0; display: flex; flex-direction: column; }
+        #b-account-modal form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        #b-account-modal .bac-header { flex-shrink: 0; flex-wrap: wrap; padding: 10px 16px; }
+        #b-account-modal .bac-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; -webkit-overflow-scrolling: touch; }
+        #b-account-modal .bac-top-card { padding: 14px; }
+        #b-account-modal .bac-top-row, #b-account-modal .bac-addr-row { flex-direction: column; align-items: stretch; gap: 10px; }
+        #b-account-modal .bac-addr-taxid-group { min-width: 0; }
+        #b-account-modal .bac-boxes { grid-template-columns: minmax(0, 1fr); }
+        #b-account-modal .bq-input-modern, #b-account-modal .bac-box-ta { font-size: 16px; }
+        #b-account-modal .bq-input-modern, #b-account-modal .bq-search-btn { height: 42px; }
+        #b-account-modal .bac-footer { flex-shrink: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+        #b-account-modal .btn-bac-save { flex: 1; justify-content: center; height: 44px; }
+        #b-account-modal .btn-bac-del { height: 44px; }
+        #b-account-modal .bac-overlay { align-items: flex-end; }
+        #b-account-modal .bac-overlay-card { width: 100%; height: 88dvh; max-height: none; border-radius: 22px 22px 0 0; padding: 18px 16px calc(12px + env(safe-area-inset-bottom)); }
+    }
 </style>
 
 <div class="modal fade" id="b-account-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">

@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-ACCOUNT | Member</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,7 +12,7 @@
     <script src="/system/save-bar.js"></script>
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css">
-    <link rel="stylesheet" href="b-account.css">
+    <link rel="stylesheet" href="b-account.css?v=2">
     <style>
         /* Cross-document View Transitions — see b-account-settings.html for
            the full explanation; needs this same declaration on both pages
@@ -269,6 +270,27 @@
         .btn-am-confirm { background: var(--c-dark); color: var(--c-accent); border: none; border-radius: 10px; padding: 9px 22px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
         .btn-am-confirm:hover:not(:disabled) { background: #0f172a; }
         .btn-am-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── Phone / portrait tablet (992px, same as the other pages): the
+           header stacks (title / search / Bulk + Add), the permission
+           table keeps its sideways scroll but with a narrower sticky name
+           column so the toggles next to it are visible; popups fit. ── */
+        @media (max-width: 991.98px) {
+            .settings-wrapper { padding: 16px 16px 140px; }
+            .page-header { margin-bottom: 14px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .settings-tabnav { gap: 6px; margin-bottom: 14px; }
+            .settings-tab { flex: 1; justify-content: center; padding: 10px 6px; }
+            .section { border-radius: 16px; }
+            .section-header { padding: 12px 14px; }
+            .section-header.mem-header-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+            .section-header .table-search-wrap { max-width: none; }
+            .mem-header-grid .mem-header-right-group { justify-self: stretch; justify-content: space-between; }
+            .section-body { padding: 12px 14px; }
+            .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { width: 150px; }
+            #mem-list colgroup col:nth-child(2) { width: 150px !important; }
+            .mem-filter-modal, .am-modal { width: calc(100vw - 24px); }
+        }
     </style>
 </head>
 <body>

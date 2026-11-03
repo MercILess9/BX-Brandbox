@@ -88,3 +88,39 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 /* ── FAB ── */
 .fab-add { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: var(--c-dark); color: var(--c-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; border: none; z-index: 1000; transition: 0.3s; }
 .fab-add:hover { transform: scale(1.1) rotate(90deg); background: #0f172a; }
+
+/* ── Phone / portrait tablet filter (Opportunity + Account lists) ──
+   Same layout as B-Quest's (b-quest.css): Search keeps the first row
+   (with Advance + Reset on Opportunity); Sort / Status-or-Type segment /
+   BU / Status dropdown stack below it full width. On a page with an
+   Advance button (#filter-zone.flt-has-adv) those rows only show while
+   Advance is open (.adv-open, toggled by the page's toggleAdvanced()).
+   #filter-zone-prefixed so it outranks each page's own inline desktop
+   sizing (.flt-search/.status-dd-wrap widths etc.). */
+@media (max-width: 991.98px) {
+    #filter-zone.flt-wrapper { padding: 10px 0; }
+    #filter-zone .flt-inner { padding: 0 16px; }
+    #filter-zone .flt-row { flex-wrap: wrap; gap: 8px; }
+    #filter-zone .flt-right-group { display: contents; }
+    /* Basis reserves the row for Search: only Advance (38) + Reset (38)
+       + gaps fit beside it. */
+    #filter-zone .flt-search { order: 1; flex: 1 1 calc(100% - 100px); min-width: 0; }
+    #filter-zone .flt-btn-adv { order: 2; position: relative; }
+    #filter-zone .btn-reset { order: 3; position: static; margin-left: 0; }
+    #filter-zone .btn-reset:not(.has-filters) { display: none; }
+    /* Basis leaves exactly the sort toggle + gap, so Sort lands beside it. */
+    #filter-zone .status-seg-wrap { order: 4; flex: 1 1 calc(100% - 84px); width: auto; min-width: 0; margin: 0; }
+    #filter-zone .flt-sort-wrap { order: 5; }
+    #filter-zone .flt-right-group > .flt-select-box, #filter-zone .status-dd-wrap { order: 6; flex: 1 1 100%; width: auto; }
+    #filter-zone.flt-has-adv:not(.adv-open) .flt-sort-wrap,
+    #filter-zone.flt-has-adv:not(.adv-open) .status-seg-wrap,
+    #filter-zone.flt-has-adv:not(.adv-open) .flt-right-group > .flt-select-box { display: none; }
+    #filter-zone .flt-advanced-zone.show { max-height: 400px; margin-top: 8px; padding-top: 8px; }
+    #filter-zone .flt-advanced-row { flex-direction: column; align-items: stretch; gap: 8px; }
+    #filter-zone .flt-advanced-row .flt-select-box { width: 100%; }
+    /* Advance count — with Status/BU folded away, this is the only sign
+       a filter is still on while the panel is closed. */
+    #filter-zone .flt-btn-adv[data-count]:not([data-count=""])::after { content: attr(data-count); position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--c-accent); color: var(--c-on-accent); font-size: 0.6rem; font-weight: 800; line-height: 16px; text-align: center; }
+
+    .fab-add { width: 56px; height: 56px; right: 16px; bottom: 20px; font-size: 24px; }
+}
