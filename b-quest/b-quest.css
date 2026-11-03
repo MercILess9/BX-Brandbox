@@ -161,3 +161,41 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
 .flt-advanced-zone { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, opacity 0.3s ease; opacity: 0; border-top: 1px dashed transparent; }
 .flt-advanced-zone.show { max-height: 200px; opacity: 1; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
 .flt-advanced-row { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: nowrap; }
+
+/* ── Phone / portrait tablet filter (List + Assignment) ──
+   Only Search + Advance (+ Reset once something's active) stay on the
+   first row; Sort/Role/Deadline only show while Advance is open
+   (#filter-zone.adv-open, toggled by each page's Advance handler),
+   above the dropdowns, full width. .flt-right-group becomes
+   display:contents so its children join .flt-row's wrapping/ordering.
+   Every rule is #filter-zone-prefixed so it outranks each page's own
+   inline desktop sizing (.flt-search/.role-seg-wrap widths etc.).
+   Deadline is wrapped with Today on List (.flt-date-today-wrap) but a
+   bare .flt-select-box child of .flt-right-group on Assignment. */
+@media (max-width: 991.98px) {
+    #filter-zone.flt-wrapper { padding: 10px 0; }
+    #filter-zone .flt-inner { padding: 0 16px; }
+    #filter-zone .flt-row { flex-wrap: wrap; gap: 8px; }
+    #filter-zone .flt-right-group { display: contents; }
+    /* Basis reserves the row for Search: only Advance (38) + Reset (32)
+       + gaps fit beside it, so Role can't wrap up onto it while Reset
+       is hidden. */
+    #filter-zone .flt-search { order: 1; flex: 1 1 calc(100% - 100px); min-width: 0; }
+    #filter-zone .flt-btn-adv { order: 2; position: relative; }
+    #filter-zone .flt-btn-reset { order: 3; position: static; margin-left: 0; }
+    #filter-zone .flt-btn-reset:not(.has-filters) { display: none; }
+    #filter-zone .flt-sort-wrap, #filter-zone .role-seg-wrap, #filter-zone .flt-date-today-wrap, #filter-zone .flt-right-group > .flt-select-box { display: none; }
+    #filter-zone.adv-open .flt-sort-wrap, #filter-zone.adv-open .role-seg-wrap, #filter-zone.adv-open .flt-date-today-wrap, #filter-zone.adv-open .flt-right-group > .flt-select-box { display: flex; }
+    /* Basis leaves exactly the sort toggle's 72px + gap, so Sort lands
+       beside Role. */
+    #filter-zone .role-seg-wrap { order: 4; flex: 1 1 calc(100% - 84px); width: auto; min-width: 0; }
+    #filter-zone .flt-sort-wrap { order: 5; }
+    #filter-zone .flt-date-today-wrap, #filter-zone .flt-right-group > .flt-select-box { order: 6; flex: 1 1 100%; width: auto; }
+    #filter-zone .flt-date-today-wrap .flt-select-box { flex: 1; min-width: 0; width: auto; }
+    #filter-zone .flt-advanced-zone.show { max-height: 400px; margin-top: 8px; padding-top: 8px; }
+    #filter-zone .flt-advanced-row { flex-direction: column; align-items: stretch; gap: 8px; }
+    #filter-zone .flt-advanced-row .flt-select-box { width: 100%; }
+    /* Advance count — with Role/Deadline folded away, this is the only
+       sign a filter is still on while the panel is closed. */
+    #filter-zone .flt-btn-adv[data-count]:not([data-count=""])::after { content: attr(data-count); position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--c-accent); color: var(--c-on-accent); font-size: 0.6rem; font-weight: 800; line-height: 16px; text-align: center; }
+}

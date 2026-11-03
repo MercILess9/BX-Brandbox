@@ -204,40 +204,10 @@
 
         /* ── Phone / portrait tablet ──
            992px, not 768: the desktop row is built from fixed widths
-           (info 460 + badges 330 + meta 200, filter ~1100 total) that
-           already overflow a portrait iPad, so it gets this layout too.
-           Filter: only Search + Advance (+ Reset once something's active)
-           stay on the first row; Role/Sort/Date only show while Advance is
-           open (#filter-zone.adv-open), above the dropdowns, each row full
-           width. .flt-right-group becomes display:contents so its children
-           join .flt-row's own wrapping/ordering. */
+           (info 460 + badges 330 + meta 200) that already overflow a
+           portrait iPad, so it gets this layout too. The filter's phone
+           layout is shared with Assignment — see b-quest.css. */
         @media (max-width: 991.98px) {
-            .flt-wrapper { padding: 10px 0; }
-            #filter-zone .flt-inner { padding: 0 16px; }
-            .flt-row { flex-wrap: wrap; gap: 8px; }
-            .flt-right-group { display: contents; }
-            /* Basis reserves the row for Search: only Advance (38) + Reset
-               (32) + gaps fit beside it, so Role can never wrap up onto
-               this row while Reset is hidden. */
-            .flt-search { order: 1; flex: 1 1 calc(100% - 100px); min-width: 0; }
-            .flt-btn-adv { order: 2; position: relative; }
-            .flt-btn-reset { order: 3; position: static; margin-left: 0; }
-            .flt-btn-reset:not(.has-filters) { display: none; }
-            .flt-sort-wrap, .role-seg-wrap, .flt-date-today-wrap { display: none; }
-            #filter-zone.adv-open .flt-sort-wrap, #filter-zone.adv-open .role-seg-wrap, #filter-zone.adv-open .flt-date-today-wrap { display: flex; }
-            /* Basis leaves exactly the sort toggle's 72px + gap, so Role can't
-               squeeze onto the Search row and Sort lands beside it. */
-            .role-seg-wrap { order: 4; flex: 1 1 calc(100% - 84px); width: auto; min-width: 0; }
-            .flt-sort-wrap { order: 5; }
-            .flt-date-today-wrap { order: 6; flex: 1 1 100%; }
-            .flt-date-today-wrap #wrap-filterDeadline { flex: 1; min-width: 0; }
-            .flt-advanced-zone.show { max-height: 400px; margin-top: 8px; padding-top: 8px; }
-            .flt-advanced-row { flex-direction: column; align-items: stretch; gap: 8px; }
-            .flt-advanced-row .flt-select-box { width: 100%; }
-            /* Advance count — with Role/Date folded away, this is the only
-               sign a filter is still on while the panel is closed. */
-            .flt-btn-adv[data-count]:not([data-count=""])::after { content: attr(data-count); position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--c-accent); color: var(--c-on-accent); font-size: 0.6rem; font-weight: 800; line-height: 16px; text-align: center; }
-
             #card-container { padding: 12px 16px 120px !important; }
             .bqc-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 12px 14px; align-items: start; }
             .bqc-info-zone { grid-column: 1; grid-row: 1; width: auto; gap: 10px; align-items: flex-start; }

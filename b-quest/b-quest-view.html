@@ -165,8 +165,22 @@
             .bqv-role-card { box-shadow: none; }
         }
 
-        @media (max-width: 700px) {
-            .bqv-role-highlight, .bqv-role-fields { grid-template-columns: 1fr; }
+        /* Phone: drop the A4 sheet framing (18mm side padding and a 297mm
+           minimum height are most of a 375px screen) for an edge-to-edge
+           page. Save PDF still renders the desktop A4 layout —
+           exportElementToPDF() captures at a desktop window width, which
+           this media query doesn't match. */
+        @media (max-width: 767.98px) {
+            body { background: #fff; }
+            .a4-page { width: 100%; max-width: none; min-height: 0; margin: 0; padding: 20px 16px 48px; box-shadow: none; border-radius: 0; }
+            .bqv-logo-row { display: none; }
+            .bqv-head { padding-bottom: 16px; margin-bottom: 18px; }
+            .bqv-title { font-size: 1.3rem; }
+            .bqv-subtitle { align-items: flex-start; }
+            .bqv-meta-row { gap: 14px; margin-bottom: 22px; }
+            .bqv-meta-item { flex-basis: 100%; }
+            .bqv-role-card { padding: 14px; }
+            .bqv-role-fields { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -272,7 +286,7 @@
         const roleById = Object.fromEntries((roles || []).map(r => [r.id, r]));
         const statusById = Object.fromEntries((statuses || []).map(s => [s.id, s]));
 
-        renderHeader(quest);
+        renderHeader(quest, linkCfg);
         renderRoles(taskRoles || [], roleById, statusById);
         applyEditDeleteVisibility(quest, taskRoles || [], roleById);
 
@@ -343,7 +357,7 @@
         document.getElementById('notFoundState').style.display = 'block';
     }
 
-    function renderHeader(quest) {
+    function renderHeader(quest, linkCfg) {
         // b-quest-list.html reads this and, if the card isn't already in
         // whatever page of the infinite-scroll list happens to be loaded,
         // fetches+inserts it on its own then scrolls/expands it — see

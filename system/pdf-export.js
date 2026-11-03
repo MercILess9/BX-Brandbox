@@ -26,7 +26,10 @@
 async function exportElementToPDF(target, filename) {
     if (!target) throw new Error('exportElementToPDF: target element not found');
 
-    const canvas = await html2canvas(target, { useCORS: true, scale: 2, backgroundColor: '#ffffff' });
+    // windowWidth: html2canvas re-renders the page in a clone at this
+    // width, so a phone still exports the desktop A4 layout instead of
+    // its own narrow phone layout (media queries match the clone's width).
+    const canvas = await html2canvas(target, { useCORS: true, scale: 2, backgroundColor: '#ffffff', windowWidth: Math.max(window.innerWidth, 1200) });
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
     const pageWidthMM = 210, pageHeightMM = 297;

@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-QUEST | Assignment</title>
 
@@ -165,6 +166,34 @@
         /* Floating Save Bar itself is the shared /system/save-bar.js
            component now (Cancel + Undo + nav guard built in) — no
            page-local markup/CSS needed. */
+
+        /* ── Phone / portrait tablet (same 992px cut as the List page;
+           filter layout is shared in b-quest.css). The four fixed-width
+           zones stack: ID + role, task, owner/deadline, then a full-width
+           Assign button — always visible, there's no hover on touch. ── */
+        @media (max-width: 991.98px) {
+            .assign-wrapper { padding: 16px 16px 120px; }
+            .page-header { margin-bottom: 14px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .assign-card { display: grid; grid-template-columns: minmax(0, 1fr); }
+            .ac-zone + .ac-zone { border-left: none; }
+            .ac-zone { padding: 0 14px; }
+            .ac-left { width: auto; flex-direction: row; justify-content: flex-start; gap: 8px; padding-top: 12px; }
+            .role-badge { width: auto; padding: 4px 10px; }
+            .ac-mid { padding-top: 8px; }
+            .task-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            .ac-meta { width: auto; padding-top: 10px; }
+            .ac-owner-avatar { width: 26px; height: 26px; }
+            .ac-meta-lines { flex-direction: row; align-items: center; gap: 12px; }
+            .ac-actions { width: auto; justify-content: stretch; padding: 10px 14px 12px; }
+            .ac-btn-view { opacity: 1; flex-shrink: 0; }
+            .ac-btn-assign { opacity: 1; flex: 1; max-width: none; justify-content: center; height: 40px; }
+            .ac-detail-inner { padding: 12px 14px; }
+        }
+        @media (hover: none) {
+            .ac-btn-view, .ac-btn-assign { opacity: 1; }
+            .assign-card-wrap:hover { box-shadow: none; }
+        }
     </style>
 </head>
 <body>
@@ -579,6 +608,10 @@
             const btn = document.getElementById('toggleFilters');
             zone.classList.toggle('show');
             btn.classList.toggle('active', zone.classList.contains('show'));
+            // Phone layout (b-quest.css) shows Role/Sort/Deadline only while
+            // open; the role slider measures its button, so re-place it.
+            document.getElementById('filter-zone').classList.toggle('adv-open', zone.classList.contains('show'));
+            roleSeg.reposition();
         });
         document.getElementById('roleSegWrap')?.addEventListener('scroll', () => roleSeg.updateFade());
     }
@@ -609,6 +642,13 @@
         const anyActive = val('filterSearch') || deadlineStart || deadlineEnd || getRoleFilter() ||
             statusFilter?.getValues().length || typeFilter?.getValues().length || workFilter?.getValues().length || ownerFilter?.getValues().length;
         document.getElementById('clearAllBtn')?.classList.toggle('has-filters', !!anyActive);
+        // Phone-only badge on Advance (b-quest.css) — search is left out
+        // since its box stays visible either way.
+        const advCount = [deadlineStart || deadlineEnd, getRoleFilter(), statusFilter?.getValues().length,
+            typeFilter?.getValues().length, workFilter?.getValues().length,
+            ownerFilter?.getValues().length].filter(Boolean).length;
+        const advBtn = document.getElementById('toggleFilters');
+        if (advBtn) advBtn.dataset.count = advCount || '';
     }
 
     function resetAllFilters() {
