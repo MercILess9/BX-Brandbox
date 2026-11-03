@@ -6,10 +6,10 @@ const B_QUEST_CONFIG = {
     itemsPerPage_Assign: 10,
     listTypes: ["New Task", "Revise 1", "Revise 2", "Revise 3", "Revise 4", "Revise 5"],
     menus: [
-        { name: "Dashboard", link: "b-quest-dashboard.html", perm: "dashboard" },
-        { name: "List", link: "b-quest-list.html" },
-        { name: "Assignment", link: "b-quest-assignment.html", perm: "assign" },
-        { name: "Settings", link: "b-quest-settings.html", perm: "setting", activeAlso: ["b-quest-members.html"] },
+        { name: "Dashboard", icon: "bi-grid-1x2", link: "b-quest-dashboard.html", perm: "dashboard" },
+        { name: "List", icon: "bi-list-task", link: "b-quest-list.html" },
+        { name: "Assignment", icon: "bi-person-check", link: "b-quest-assignment.html", perm: "assign" },
+        { name: "Settings", icon: "bi-gear", link: "b-quest-settings.html", perm: "setting", activeAlso: ["b-quest-members.html"] },
     ]
 };
 

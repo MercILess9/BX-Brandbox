@@ -3,8 +3,8 @@ const B_FINANCE_CONFIG = {
     version: "1.0.5",
     accessKey: 'bfinance',
     menus: [
-        { name: "Finance",  link: "b-finance-list.html" },
-        { name: "Settings", link: "b-finance-settings.html", perm: "setting", activeAlso: ["b-finance-members.html"] },
+        { name: "Finance",  icon: "bi-cash-stack", link: "b-finance-list.html" },
+        { name: "Settings", icon: "bi-gear", link: "b-finance-settings.html", perm: "setting", activeAlso: ["b-finance-members.html"] },
     ]
 };
 

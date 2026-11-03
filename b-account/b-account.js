@@ -44,10 +44,10 @@ const B_ACCOUNT_CONFIG = {
     version: "2.3",
     accessKey: 'baccount',
     menus: [
-        { name: "Account",     link: "b-account-list.html", perm: "account" },
-        { name: "Opportunity", link: "b-opportunity-list.html" },
-        { name: "Dashboard",   link: "b-account-dashboard.html", perm: "dashboard" },
-        { name: "Settings",    link: "b-account-settings.html", perm: "setting", activeAlso: ["b-account-members.html"] },
+        { name: "Account",     icon: "bi-building", link: "b-account-list.html", perm: "account" },
+        { name: "Opportunity", icon: "bi-briefcase", link: "b-opportunity-list.html" },
+        { name: "Dashboard",   icon: "bi-grid-1x2", link: "b-account-dashboard.html", perm: "dashboard" },
+        { name: "Settings",    icon: "bi-gear", link: "b-account-settings.html", perm: "setting", activeAlso: ["b-account-members.html"] },
     ]
 };
 

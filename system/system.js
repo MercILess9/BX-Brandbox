@@ -652,20 +652,27 @@ async function renderSystemUI(config) {
     // whether it's visible can change anytime via window resize.
     const hamburgerBtn = document.getElementById('sys-hamburger-btn');
     const navMenu = document.getElementById('sys-nav-inject');
+    // Dim layer behind the open menu — it also takes the tap that closes
+    // the menu, so that tap can't land on a card underneath.
+    const navBackdrop = document.getElementById('sys-nav-backdrop');
+    const setNavOpen = (open) => {
+        navMenu.classList.toggle('open', open);
+        navBackdrop?.classList.toggle('open', open);
+    };
     if (hamburgerBtn && navMenu) {
         hamburgerBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            navMenu.classList.toggle('open');
+            setNavOpen(!navMenu.classList.contains('open'));
         });
         document.addEventListener('click', (e) => {
-            if (!navMenu.contains(e.target) && e.target !== hamburgerBtn && !hamburgerBtn.contains(e.target)) navMenu.classList.remove('open');
+            if (!navMenu.contains(e.target) && e.target !== hamburgerBtn && !hamburgerBtn.contains(e.target)) setNavOpen(false);
         });
         // A resize past the mobile breakpoint (device rotation, or a
         // desktop window un-maximized then maximized again) shouldn't
         // leave the dropdown stuck open once the hamburger itself has
         // disappeared and the centered desktop nav takes over again.
         window.addEventListener('resize', () => {
-            if (window.innerWidth > 768) navMenu.classList.remove('open');
+            if (window.innerWidth > 768) setNavOpen(false);
         });
     }
 }
@@ -703,7 +710,9 @@ async function renderSystemMenu(config) {
         // still shows the right top-level item instead of going dark.
         const isActive = (currentPath === menu.link.replace(/\.html$/, '')
             || (menu.activeAlso || []).some(p => currentPath === p.replace(/\.html$/, ''))) ? 'active' : '';
-        return `<a href="${menu.link}" class="sys-menu-link ${isActive}">${menu.name}</a>`;
+        // icon is optional and only shown in the phone menu (header.html).
+        const icon = menu.icon ? `<i class="bi ${menu.icon} sys-menu-icon"></i>` : '';
+        return `<a href="${menu.link}" class="sys-menu-link ${isActive}">${icon}${menu.name}</a>`;
     }).join('');
 }
 

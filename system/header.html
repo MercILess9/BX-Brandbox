@@ -347,6 +347,10 @@
         background: #f2f2f2;
     }
 
+    /* Menu icons and the backdrop are phone-menu only — the desktop row
+       stays text. Declared before the media block so it can override. */
+    .sys-menu-icon, .sys-nav-backdrop { display: none; }
+
     @media (max-width: 768px) {
         .sys-header-wrapper { padding: 0 16px; }
         .sys-divider, .sys-version-badge { display: none; }
@@ -364,29 +368,44 @@
             height: auto;
             max-height: 0;
             overflow: hidden;
+            padding: 0 12px;
             background: #fff;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-            transition: max-height 0.2s ease;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 16px 32px rgba(15,23,42,0.12);
+            transition: max-height 0.25s ease, padding 0.25s ease;
+            z-index: 1;
         }
 
         #sys-nav-inject.open {
             max-height: calc(100vh - var(--header-height));
             overflow-y: auto;
+            padding: 8px 12px 12px;
         }
 
+        /* Rounded rows with an icon (menu.icon), not full-bleed text
+           strips. The sliding underline only makes sense in the
+           horizontal desktop row, so the active item becomes the app's
+           dark-button pattern instead (dark fill + accent text, same as
+           the Add buttons) — the old accent-light fill put accent-colored
+           text on a near-identical tint. */
         .sys-menu-link {
             width: 100%;
-            padding: 15px 20px;
-            border-bottom: 1px solid #f2f2f2;
-            font-size: 1.05rem;
+            height: 48px;
+            padding: 0 14px;
+            gap: 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #475569 !important;
         }
-
-        /* The sliding underline only makes sense under a horizontal,
-           same-row set of links — stacked vertically it would just be a
-           stray line under whichever one is active, so the active state
-           switches to a plain tinted background instead. */
+        .sys-menu-link + .sys-menu-link { margin-top: 2px; }
         .sys-menu-link::after { display: none; }
-        .sys-menu-link.active { background: var(--c-accent-light, #f4f7a1); }
+        .sys-menu-link:hover { background: #f1f5f9; color: var(--c-dark, #1e293b) !important; }
+        .sys-menu-link.active { background: var(--c-dark, #1e293b); color: var(--c-accent, #bdc432) !important; font-weight: 700; }
+        .sys-menu-icon { display: inline-block; width: 20px; text-align: center; font-size: 1.05rem; }
+
+        .sys-nav-backdrop { display: block; position: fixed; inset: var(--header-height) 0 0 0; background: rgba(15,23,42,0.35); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+        .sys-nav-backdrop.open { opacity: 1; pointer-events: auto; }
     }
 </style>
 
@@ -401,6 +420,7 @@
         <span class="sys-version-badge" id="project-version"></span>
     </div>
 
+    <div class="sys-nav-backdrop" id="sys-nav-backdrop"></div>
     <div id="sys-nav-inject"></div>
 
     <div class="sys-user-zone">
