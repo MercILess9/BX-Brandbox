@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>SYSTEM | Setting</title>
 
@@ -697,6 +698,72 @@
         .holiday-daytype-btn:last-child { border-right: none; }
         .holiday-daytype-btn:hover:not(.active) { background: var(--c-bg); }
         .holiday-daytype-btn.active { background: var(--c-accent); color: var(--c-dark); }
+
+        /* Phone-only ▲/▼ reorder buttons (moveBtnsHtml) — hidden on desktop. */
+        .cfg-move { display: none; }
+
+        /* ── Phone / portrait tablet (same 992px cut as B-Quest) ──
+           Everything stacks to one column; Department/Project rows reorder
+           with ▲/▼ instead of HTML5 drag (no finger support on iOS); the
+           Member/Access tables keep scrolling sideways but with a narrower
+           sticky name column so the data next to it is actually visible. */
+        @media (max-width: 991.98px) {
+            .settings-wrapper { padding: 16px 16px 140px; }
+            .page-header { margin-bottom: 14px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .top-tabs { gap: 6px; margin-bottom: 14px; }
+            .top-tab-btn { flex: 1; min-width: 0; flex-direction: column; justify-content: center; gap: 3px; padding: 8px 4px; font-size: 0.72rem; }
+
+            .section { border-radius: 16px; margin-bottom: 12px; }
+            .section-header { padding: 12px 14px; gap: 8px; }
+            .section > div[style*="padding"], .section-body { padding: 14px !important; }
+            .settings-row-split { flex-direction: column; gap: 12px; margin-bottom: 12px; }
+
+            .brand-split-row { flex-direction: column; gap: 20px; }
+            .brand-logo-slot { gap: 14px; }
+            .brand-logo-preview-wrap { width: 120px; }
+            .brand-logo-preview.is-wide { width: 120px; height: 46px; }
+            .brand-logo-preview.is-square { width: 56px; height: 56px; }
+            .brand-color-row { flex-direction: column; gap: 12px; }
+            .brand-color-theme-col { flex: none; flex-direction: row; justify-content: flex-start; padding: 6px 2px; }
+            .brand-color-theme-col .cfg-swatch { width: 64px; height: 32px; }
+            .brand-color-divider { display: none; }
+            .brand-color-name { width: 92px; }
+
+            /* Status segment drops under icon + name — side by side the
+               name field was squeezed to a few characters. */
+            .proj-toggle-item { flex-wrap: wrap; gap: 10px; row-gap: 8px; }
+            .proj-status-seg { flex-basis: calc(100% - 34px); margin-left: 34px; }
+
+            .dept-list { grid-template-columns: 1fr; }
+            .dept-item:nth-child(even) { border-left: none; padding-left: 4px; }
+            .dept-item:nth-last-child(-n+2) { border-bottom: 1px solid #f1f5f9; }
+            .dept-item:last-child { border-bottom: none; }
+
+            .dept-drag-handle > .bi-grip-vertical, .proj-drag-handle > .bi-grip-vertical { display: none; }
+            .dept-drag-handle, .proj-drag-handle { width: 24px; padding: 0; }
+            .cfg-move { display: flex; flex-direction: column; }
+            .cfg-move button { width: 24px; height: 18px; padding: 0; border: none; background: none; color: #94a3b8; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+            .cfg-move button:active { background: var(--c-accent-light); color: var(--c-accent-dark); }
+
+            /* Holiday: date takes the whole first line (a range like
+               "13 Apr - 15 Apr" needs it), name + Full/Half badge and
+               actions share the second; the table head row is dropped
+               since the cells now read as a card, not columns. */
+            .holiday-table-head { display: none; }
+            .holiday-cols { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 4px 10px; }
+            .holiday-row { padding: 10px 6px; }
+            .holiday-row > :nth-child(2) { grid-column: 2 / -1; grid-row: 1; }
+            .holiday-row > :nth-child(3) { grid-column: 2; grid-row: 2; min-width: 0; }
+            .holiday-row > :nth-child(4) { grid-column: 3; grid-row: 2; }
+            .holiday-view-date { white-space: normal; }
+
+            .section-header.mem-header-grid { grid-template-columns: minmax(0, 1fr); }
+            .mem-header-grid .mem-header-right-group { justify-self: start; }
+            .mem-header-right-group:empty { display: none; }
+            .usr-matrix th.usr-col-name, .usr-matrix td.usr-col-name { width: 150px; }
+            #usr-colgroup col:nth-child(2), #acc-colgroup col:nth-child(2) { width: 150px !important; }
+        }
     </style>
 </head>
 <body>
@@ -1328,7 +1395,7 @@
                  ondragstart="deptDragStart(event, '${safeKey}')" ondragend="deptDragEnd(event)"
                  ondragover="event.preventDefault()" ondragenter="deptDragEnterRow(event, '${safeKey}')" ondragleave="deptDragLeaveRow(event)"
                  ondrop="deptDropOnRow(event, '${safeKey}')">
-                <div class="dept-drag-handle"><i class="bi bi-grip-vertical"></i></div>
+                <div class="dept-drag-handle"><i class="bi bi-grip-vertical"></i>${isDeleted ? '' : moveBtnsHtml('deptMove', safeKey)}</div>
                 <input class="dept-name-input" value="${safeName}" ${isDeleted ? 'disabled' : ''}
                     oninput="onDeptRename('${safeKey}', this.value)"
                     onkeydown="if(event.key==='Enter')this.blur()"
@@ -1380,18 +1447,36 @@
         e.preventDefault();
         e.currentTarget.classList.remove('drag-over');
         if (!deptDragState || deptDragState === key) { deptDragState = null; return; }
-
-        const list = deptBuffer().filter(d => d._state !== 'deleted');
-        const fromIdx = list.findIndex(d => d._key === deptDragState);
-        const toIdx = list.findIndex(d => d._key === key);
-        if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = list.splice(fromIdx, 1);
-            list.splice(toIdx, 0, moved);
-            list.forEach((d, i) => { deptEnsureChange(d._key).sort_order = i + 1; });
-            markDirtyDept();
-            renderDepartments();
-        }
+        deptReorder(deptDragState, key);
         deptDragState = null;
+    }
+
+    // Shared by drag-and-drop and the phone ▲/▼ buttons (deptMove).
+    function deptReorder(fromKey, toKey) {
+        const list = deptBuffer().filter(d => d._state !== 'deleted');
+        const fromIdx = list.findIndex(d => d._key === fromKey);
+        const toIdx = list.findIndex(d => d._key === toKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = list.splice(fromIdx, 1);
+        list.splice(toIdx, 0, moved);
+        list.forEach((d, i) => { deptEnsureChange(d._key).sort_order = i + 1; });
+        markDirtyDept();
+        renderDepartments();
+    }
+
+    function deptMove(key, dir) {
+        const list = deptBuffer().filter(d => d._state !== 'deleted');
+        const neighbor = list[list.findIndex(d => d._key === key) + dir];
+        if (neighbor) deptReorder(key, neighbor._key);
+    }
+
+    // ▲/▼ pair inside a drag handle — HTML5 drag-and-drop doesn't work
+    // with a finger on iOS, so the phone CSS swaps the grip for these.
+    function moveBtnsHtml(fn, key) {
+        return `<span class="cfg-move">
+            <button type="button" onclick="${fn}('${key}', -1)" title="Move up"><i class="bi bi-chevron-up"></i></button>
+            <button type="button" onclick="${fn}('${key}', 1)" title="Move down"><i class="bi bi-chevron-down"></i></button>
+        </span>`;
     }
 
     function onDeptActiveToggle(key, checked) {
@@ -1698,7 +1783,7 @@
                  ondragstart="projDragStart(event, '${p.key}')" ondragend="projDragEnd(event)"
                  ondragover="event.preventDefault()" ondragenter="projDragEnterRow(event, '${p.key}')" ondragleave="projDragLeaveRow(event)"
                  ondrop="projDropOnRow(event, '${p.key}')">
-                <div class="proj-drag-handle"><i class="bi bi-grip-vertical"></i></div>
+                <div class="proj-drag-handle"><i class="bi bi-grip-vertical"></i>${moveBtnsHtml('projMove', p.key)}</div>
                 <div class="proj-toggle-icon" title="Change icon" onclick="onProjectIconClick(event, '${p.key}')"><i class="bi ${icon}"></i></div>
                 <input class="proj-toggle-name-input" value="${esc(label)}" placeholder="${esc(projectDefault(p.key).label)}"
                     oninput="onProjectLabelChange('${p.key}', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -1801,18 +1886,31 @@
         e.preventDefault();
         e.currentTarget.classList.remove('drag-over');
         if (!projectDragState || projectDragState === key) { projectDragState = null; return; }
-
-        const list = [...PROJECT_LIST].sort((a, b) => projectSortValue(a.key) - projectSortValue(b.key));
-        const fromIdx = list.findIndex(p => p.key === projectDragState);
-        const toIdx = list.findIndex(p => p.key === key);
-        if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = list.splice(fromIdx, 1);
-            list.splice(toIdx, 0, moved);
-            list.forEach((p, i) => { projEnsureChange(p.key).sort_order = i; });
-            markDirtyProjects();
-            renderProjects();
-        }
+        projReorder(projectDragState, key);
         projectDragState = null;
+    }
+
+    // Shared by drag-and-drop and the phone ▲/▼ buttons (projMove).
+    function projOrderedList() {
+        return [...PROJECT_LIST].sort((a, b) => projectSortValue(a.key) - projectSortValue(b.key));
+    }
+
+    function projReorder(fromKey, toKey) {
+        const list = projOrderedList();
+        const fromIdx = list.findIndex(p => p.key === fromKey);
+        const toIdx = list.findIndex(p => p.key === toKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = list.splice(fromIdx, 1);
+        list.splice(toIdx, 0, moved);
+        list.forEach((p, i) => { projEnsureChange(p.key).sort_order = i; });
+        markDirtyProjects();
+        renderProjects();
+    }
+
+    function projMove(key, dir) {
+        const list = projOrderedList();
+        const neighbor = list[list.findIndex(p => p.key === key) + dir];
+        if (neighbor) projReorder(key, neighbor.key);
     }
 
     function resetBrandingColors() {
