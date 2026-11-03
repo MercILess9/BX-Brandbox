@@ -355,6 +355,60 @@ function bqSpreadWeight(tasks, role, start, end, pad, workdayWeight = null, holi
     return { weightMap, dueWeightMap, ongoingWeightMap, dueCount, ongoingCount };
 }
 
+// ── Task links (up to 3 per task) ──
+// Slot → b_quest_list column. Slot 1 is the original `link` column, so
+// tasks saved before link_2/link_3 existed need no backfill.
+const BQ_LINK_COLUMNS = { 1: 'link', 2: 'link_2', 3: 'link_3' };
+const BQ_LINK_LABEL_MAX = 12;
+
+// Settings → Links stores b_quest_setting rule 'quest_links' as an array
+// whose ORDER is the display order: [{ slot, label, active }, ...]. Always
+// returns all 3 slots, so a missing/partial/garbled value can't drop one.
+// No saved config = slot 1 on, labelled "Link", 2-3 off — exactly how the
+// single Link field looked before this existed.
+function normalizeQuestLinks(value) {
+    const saved = Array.isArray(value) ? value : [];
+    const out = [];
+    saved.forEach(s => {
+        const slot = Number(s?.slot);
+        if (!BQ_LINK_COLUMNS[slot] || out.some(o => o.slot === slot)) return;
+        out.push({ slot, label: (s.label ?? '').toString().trim().slice(0, BQ_LINK_LABEL_MAX), active: s.active === true });
+    });
+    [1, 2, 3].forEach(slot => {
+        if (!out.some(o => o.slot === slot)) out.push({ slot, label: slot === 1 && !saved.length ? 'Link' : '', active: slot === 1 && !saved.length });
+    });
+    return out;
+}
+
+// Label actually shown — an empty one falls back to "Link N" so two blank
+// slots never render as two identical buttons.
+function questLinkLabel(cfgSlot) {
+    return cfgSlot.label || `Link ${cfgSlot.slot}`;
+}
+
+// Loaded once per page load (same caching rule as other modal helper data).
+let _questLinkConfigPromise = null;
+function loadQuestLinkConfig() {
+    _questLinkConfigPromise ||= supabaseClient.from('b_quest_setting').select('value').eq('rule', 'quest_links').maybeSingle()
+        .then(({ data }) => normalizeQuestLinks(data?.value))
+        .catch(() => normalizeQuestLinks(null));
+    return _questLinkConfigPromise;
+}
+
+// Active slots that actually have a URL on this task, in display order.
+function getQuestLinks(quest, cfg) {
+    return (cfg || normalizeQuestLinks(null))
+        .filter(s => s.active)
+        .map(s => ({ slot: s.slot, label: questLinkLabel(s), url: (quest?.[BQ_LINK_COLUMNS[s.slot]] || '').trim() }))
+        .filter(l => l.url);
+}
+
+function renderQuestLinkButtons(quest, cfg, className) {
+    return getQuestLinks(quest, cfg).map(l =>
+        `<a href="${esc(safeLink(l.url))}" target="_blank" rel="noopener" class="${className}" title="${esc(l.label)}: ${esc(l.url)}"><i class="bi bi-link-45deg"></i><span class="bq-link-text">${esc(l.label)}</span></a>`
+    ).join('');
+}
+
 async function handleDeleteTask(id) {
     const res = await Swal.fire({
         title: 'Delete Task?',

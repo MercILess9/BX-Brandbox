@@ -50,7 +50,7 @@ All table names are `snake_case` (no hyphens) — standardized 2026-08-27, see [
 |---|---|
 | `profiles` | id (uuid), codename, employee_id, nick_name, full_name, email, department, level, created_at |
 | `system_department` | name (text, PK) — list of departments, RLS: SELECT open to authenticated |
-| `b_quest_list` | id, account_name, opportunity_name, task_name, detail, link, publish_date, owner, create_date, last_update — per-role fields (deadline/assign/weight/status/etc.) live on `b_quest_task_role` instead, not flat columns here |
+| `b_quest_list` | id, account_name, opportunity_name, task_name, detail, link, link_2, link_3, publish_date, owner, create_date, last_update — `link`/`link_2`/`link_3` are link slots 1-3; which slots show, their labels and display order live in `b_quest_setting` rule `quest_links` (jsonb array, see `normalizeQuestLinks()` in `b-quest.js`), a slot turned off is only hidden, never cleared. Per-role fields (deadline/assign/weight/status/etc.) live on `b_quest_task_role` instead, not flat columns here |
 | `b_quest_task_role` | id, quest_id (FK → `b_quest_list.id`), role_id (FK → `b_quest_role.id`), role (denormalized name), status_id (FK → `b_quest_status.id`), status (denormalized name), work, type, deadline, weight, day, max_per_day, assign — one row per role a task has open |
 | `b_quest_role` | id, name, color, icon, active, sort_order, max_capacity — dynamic role list (Designer/Creative/IT/...), `max_capacity` is the per-role daily cap Dashboard/Modal both read |
 | `b_quest_status` | id, name, color, active, sort_order — dynamic status list |

@@ -16,7 +16,7 @@
 
     <script src="b-quest.js"></script>
     <script src="b-quest-assign-picker.js"></script>
-    <script src="b-quest-modal.js?v=10" defer></script>
+    <script src="b-quest-modal.js?v=15" defer></script>
     <link rel="stylesheet" href="/system/theme.css">
     <link rel="stylesheet" href="b-quest.css">
 
@@ -140,6 +140,8 @@
         .bqc-meta-val { font-size: 0.82rem; font-weight: 600; color: var(--c-slate); }
         .bqc-btn-link { background: #fff; border: 1px solid var(--c-accent); border-radius: 10px; padding: 5px 12px; font-size: 0.75rem; font-weight: 600; color: var(--c-accent-dark); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .bqc-btn-link:hover { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        .bqc-btn-link { max-width: 160px; min-width: 0; }
+        .bqc-btn-link .bq-link-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         /* --- Body: Detail (fixed) + role panels (fixed width, scrollable) --- */
         .bqc-scroll-wrap { position: relative; }
         /* Was a fade to the panel's own background color — same idea as
@@ -278,6 +280,7 @@
     // since it scopes roleList/ownerList.
     let visibilityConfig = { role: 'all', owner: 'all' };
     let filterDefaults = { status: [], type: [], role: '' };
+    let questLinkCfg = normalizeQuestLinks(null); // Settings → Links
     let deadlineDefault = { lower: { mode: 'none', value: 0 }, upper: { mode: 'none', value: 0 } };
     // getVisibleQuestIds() result, cached for the session — undefined =
     // not computed yet, null = unrestricted, Set = restricted to these ids.
@@ -448,10 +451,11 @@
     // ── Data Visibility & Filter Defaults (set in Settings) ──
     async function loadListConfig() {
         const { data } = await supabaseClient.from('b_quest_setting').select('rule, value')
-            .in('rule', ['list_visibility', 'list_filter_defaults', 'list_deadline_default']);
+            .in('rule', ['list_visibility', 'list_filter_defaults', 'list_deadline_default', 'quest_links']);
         const map = Object.fromEntries((data || []).map(r => [r.rule, r.value]));
         visibilityConfig = { role: 'all', owner: 'all', ...map.list_visibility };
         filterDefaults = { status: [], type: [], role: '', ...map.list_filter_defaults };
+        questLinkCfg = normalizeQuestLinks(map.quest_links);
         deadlineDefault = {
             lower: { mode: 'none', value: 0 }, upper: { mode: 'none', value: 0 },
             ...map.list_deadline_default
@@ -762,9 +766,9 @@
                     <div class="collapse" id="${collapseId}">
                         <div class="bqc-body">
                             <div class="bqc-meta-row">
-                                <div class="d-flex gap-2">
+                                <div class="d-flex flex-wrap gap-2">
                                     <div class="bqc-meta-pill"><i class="bi bi-calendar3"></i><span class="bqc-meta-label">Publish</span><span class="bqc-meta-val ms-2">${formatDate(task.publish_date)}</span></div>
-                                    ${task.link ? `<a href="${safeLink(task.link)}" target="_blank" rel="noopener" class="bqc-btn-link"><i class="bi bi-link-45deg"></i> Link</a>` : ''}
+                                    ${renderQuestLinkButtons(task, questLinkCfg, 'bqc-btn-link')}
                                 </div>
                             </div>
 

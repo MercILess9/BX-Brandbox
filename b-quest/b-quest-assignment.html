@@ -104,6 +104,8 @@
         .pub-date { display: inline-flex; align-items: center; gap: 3px; background: #f1f5f9; border-radius: 4px; padding: 2px 8px; font-size: 0.67rem; font-weight: 600; color: #64748b; }
         .task-link { display: inline-flex; align-items: center; gap: 2px; font-size: 0.67rem; font-weight: 600; color: var(--c-accent); text-decoration: none; opacity: 0.85; transition: 0.12s; }
         .task-link:hover { opacity: 1; }
+        .task-link { max-width: 140px; min-width: 0; }
+        .task-link .bq-link-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         /* Meta zone — same divider + stacked icon-line pattern as the
            List page's .bqc-meta-zone/.bqc-meta-line, now also with the
@@ -229,6 +231,7 @@
     let roleList = [];          // [{id, name, color, icon}] — roles this user can Assign on
     let roleNameMap = {};       // role_id -> name
     let roleColorMap = {};      // role_id -> color
+    let questLinkCfg = normalizeQuestLinks(null); // Settings → Links
     let statusList = [];        // [{id, name, color}] — active statuses, for the Status dropdown
     let statusNameMap = {};     // status_id -> name
     let statusColorMap = {};    // status_id -> color
@@ -257,7 +260,8 @@
         sessionStorage.removeItem('bx_perms_bquest');
         await initLayout(B_QUEST_CONFIG);
         guardBquestPage('assign');
-        await Promise.all([loadRoles(), loadAssignCandidates(), loadWorkList(), loadStatusList(), loadTypeList(), loadOwnerList(), loadProfileMap()]);
+        await Promise.all([loadRoles(), loadAssignCandidates(), loadWorkList(), loadStatusList(), loadTypeList(), loadOwnerList(), loadProfileMap(),
+            loadQuestLinkConfig().then(cfg => { questLinkCfg = cfg; })]);
         renderRoleSeg();
         await loadAssignTotalCount();
         await loadRows(true);
@@ -450,7 +454,7 @@
 
         let query = supabaseClient
             .from('b_quest_task_role')
-            .select('id, quest_id, role_id, work, type, deadline, status_id, weight, assign, quest:"b_quest_list"(id, task_name, account_name, opportunity_name, detail, link, publish_date, owner, last_update)', { count: 'exact' })
+            .select('id, quest_id, role_id, work, type, deadline, status_id, weight, assign, quest:"b_quest_list"(id, task_name, account_name, opportunity_name, detail, link, link_2, link_3, publish_date, owner, last_update)', { count: 'exact' })
             .or('assign.is.null,assign.eq.-')
             .not('quest_id', 'is', null);
 
@@ -647,7 +651,7 @@
                             ${r.type ? `<span class="meta-chip">${esc(r.type)}</span>` : ''}
                             ${r.work ? `<span class="meta-chip">${esc(r.work)}</span>` : ''}
                             ${q.publish_date ? `<span class="pub-date"><i class="bi bi-send"></i> ${formatDate(q.publish_date)}</span>` : ''}
-                            ${q.link ? `<a class="task-link" href="${safeLink(q.link)}" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> Link</a>` : ''}
+                            ${renderQuestLinkButtons(q, questLinkCfg, 'task-link')}
                         </div>
                     </div>
 

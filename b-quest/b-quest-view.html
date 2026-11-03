@@ -46,7 +46,7 @@
          level), which needs body to already be parsed. Loaded here too
          so Edit can open the exact same modal as the List page's own
          card dropdown — no separate modal built for this page. -->
-    <script src="b-quest-modal.js?v=10" defer></script>
+    <script src="b-quest-modal.js?v=15" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
          b-account/b-opportunity-view.html's own Save PDF button — see
@@ -221,13 +221,9 @@
                         <span class="bqv-meta-value" id="taskCreateDate"></span>
                     </div>
                 </div>
-                <div class="bqv-meta-item">
-                    <div class="bqv-meta-icon"><i class="bi bi-link-45deg"></i></div>
-                    <div class="bqv-meta-text">
-                        <span class="bqv-meta-label">Link</span>
-                        <span class="bqv-meta-value" id="taskLinkWrap">-</span>
-                    </div>
-                </div>
+                <!-- One meta item per link turned on in Settings → Links
+                     (display:contents keeps them in the parent grid). -->
+                <div id="taskLinkItems" style="display: contents;"></div>
             </div>
 
             <div class="bqv-section-title"><i class="bi bi-card-text"></i> Detail</div>
@@ -260,12 +256,13 @@
         const id = new URLSearchParams(window.location.search).get('id');
         if (!id) { showNotFound(); return; }
 
-        const [{ data: quest, error: qErr }, { data: taskRoles }, { data: roles }, { data: statuses }, { data: work }] = await Promise.all([
+        const [{ data: quest, error: qErr }, { data: taskRoles }, { data: roles }, { data: statuses }, { data: work }, linkCfg] = await Promise.all([
             supabaseClient.from('b_quest_list').select('*').eq('id', id).single(),
             supabaseClient.from('b_quest_task_role').select('*').eq('quest_id', id),
             supabaseClient.from('b_quest_role').select('id, name, color, icon'),
             supabaseClient.from('b_quest_status').select('id, name, color'),
             supabaseClient.from('b_quest_work').select('work, day, weight, max_per_day, role_id').order('work'),
+            loadQuestLinkConfig(),
         ]);
 
         if (qErr || !quest) { showNotFound(); return; }
@@ -361,18 +358,20 @@
         document.getElementById('taskCreateDate').textContent = formatDate(quest.create_date);
         document.getElementById('taskPublishDate').textContent = formatDate(quest.publish_date);
 
-        const linkWrap = document.getElementById('taskLinkWrap');
-        if (quest.link) {
-            const a = document.createElement('a');
-            a.href = safeLink(quest.link);
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.textContent = quest.link;
-            linkWrap.innerHTML = '';
-            linkWrap.appendChild(a);
-        } else {
-            linkWrap.textContent = '-';
-        }
+        // Every slot that's turned on gets a row (with "-" when this task
+        // has nothing in it), labelled from Settings; slots turned off
+        // aren't shown at all.
+        const linkItems = document.getElementById('taskLinkItems');
+        linkItems.innerHTML = linkCfg.filter(s => s.active).map(s => {
+            const url = (quest[BQ_LINK_COLUMNS[s.slot]] || '').trim();
+            return `<div class="bqv-meta-item">
+                <div class="bqv-meta-icon"><i class="bi bi-link-45deg"></i></div>
+                <div class="bqv-meta-text">
+                    <span class="bqv-meta-label">${esc(questLinkLabel(s))}</span>
+                    <span class="bqv-meta-value">${url ? `<a href="${esc(safeLink(url))}" target="_blank" rel="noopener">${esc(url)}</a>` : '-'}</span>
+                </div>
+            </div>`;
+        }).join('');
 
         document.getElementById('taskDetail').textContent = quest.detail || 'No details provided.';
     }

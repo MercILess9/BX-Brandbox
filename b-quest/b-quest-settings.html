@@ -270,7 +270,14 @@
         .cfg-half-row { display: flex; gap: 20px; margin-bottom: 20px; }
         .section-calendar-col, .section-third-col { flex: 1 1 0; min-width: 0; margin-bottom: 0; }
         @media (max-width: 1100px) { .cfg-half-row { flex-wrap: wrap; } .section-calendar-col, .section-third-col { flex-basis: 100%; } }
+        /* Middle column stacks two short boxes (Data Visibility + Links)
+           instead of leaving Data Visibility's lower half empty. */
+        .cfg-stack-col { display: flex; flex-direction: column; gap: 20px; }
+        .cfg-stack-col > .section { margin-bottom: 0; }
 
+        /* ── Links (task link slots: label / on-off / order) ── */
+        .link-slot-tag { flex-shrink: 0; width: 46px; font-size: 0.68rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .cfg-name-input.is-invalid, .cfg-name-input.is-invalid:hover { border-color: var(--c-danger); background: #fef2f2; }
         /* ── Data Visibility (Own/All) ── */
         .vis-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
         .vis-row:last-of-type { border-bottom: none; }
@@ -612,7 +619,8 @@
             </div>
         </div>
 
-        <div class="section section-third-col" id="section-visibility">
+        <div class="section-third-col cfg-stack-col">
+        <div class="section" id="section-visibility">
             <div class="section-header">
                 <div class="section-title">
                     <i class="bi bi-eye-fill"></i> Data Visibility
@@ -638,6 +646,19 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="section" id="section-links">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-link-45deg"></i> Links
+                    <span class="dirty-dot"></span>
+                </div>
+            </div>
+            <div class="section-body">
+                <div id="link-list"></div>
+            </div>
+        </div>
         </div>
 
         <div class="section section-third-col" id="section-filterdefaults">
@@ -863,6 +884,10 @@
     const visibilityDeletes = new Set(); // never populated, same story as configDeletes
     let filterDefaultsChanges = {};
     const filterDefaultsDeletes = new Set(); // never populated, same story as configDeletes
+    // Links box — one b-quest-setting rule ('quest_links'), the whole
+    // 3-slot array staged at once (order = display order).
+    let linkChanges = {};
+    const linkDeletes = new Set(); // never populated, same story as configDeletes
     let fdStatusFilter, fdTypeFilter; // createMultiSelect() instances for the Default Filters box
     // Notifications/Email — settings only (who SHOULD be notified). Actually
     // sending anything (resolving rules into a deduped recipient list,
@@ -948,6 +973,7 @@
         fn('section-statuses', statusConfigChanges, statusConfigDeletes); // shares the Status box's dirty-dot — same id called twice on purpose
         fn('section-calendar', calendarChanges, calendarDeletes);
         fn('section-visibility', visibilityChanges, visibilityDeletes);
+        fn('section-links', linkChanges, linkDeletes);
         fn('section-filterdefaults', filterDefaultsChanges, filterDefaultsDeletes);
         fn('section-notify', notifyChanges, notifyDeletes);
     }
@@ -991,6 +1017,7 @@
             statusConfigChanges: JSON.parse(JSON.stringify(statusConfigChanges)),
             calendarChanges: JSON.parse(JSON.stringify(calendarChanges)),
             visibilityChanges: JSON.parse(JSON.stringify(visibilityChanges)),
+            linkChanges: JSON.parse(JSON.stringify(linkChanges)),
             filterDefaultsChanges: JSON.parse(JSON.stringify(filterDefaultsChanges)),
             notifyChanges: JSON.parse(JSON.stringify(notifyChanges)),
             roleDeletes: [...roleDeletes],
@@ -1009,6 +1036,7 @@
         statusConfigChanges = snap.statusConfigChanges;
         calendarChanges = snap.calendarChanges;
         visibilityChanges = snap.visibilityChanges;
+        linkChanges = snap.linkChanges;
         filterDefaultsChanges = snap.filterDefaultsChanges;
         notifyChanges = snap.notifyChanges;
         roleDeletes = new Set(snap.roleDeletes);
@@ -1044,20 +1072,20 @@
             if (countPending(changes, deletes) > 0) document.getElementById(id).classList.add('is-dirty');
         });
 
-        renderRoles(); renderStatuses(); renderTypes(); renderWork(); renderWorkConfigToggles(); renderWorkCalendar(); renderVisibilitySection(); renderFilterDefaultsSection(); renderNotifySection();
+        renderRoles(); renderStatuses(); renderTypes(); renderWork(); renderWorkConfigToggles(); renderWorkCalendar(); renderVisibilitySection(); renderLinksSection(); renderFilterDefaultsSection(); renderNotifySection();
         recomputeSaveBarCount();
         saveBar.setUndoAvailable(undoStack.length > 0);
     }
 
     function snapshotOfEmptyState() {
         return {
-            roleChanges: {}, statusChanges: {}, typeChanges: {}, workChanges: {}, configChanges: {}, statusConfigChanges: {}, calendarChanges: {}, visibilityChanges: {}, filterDefaultsChanges: {}, notifyChanges: {},
+            roleChanges: {}, statusChanges: {}, typeChanges: {}, workChanges: {}, configChanges: {}, statusConfigChanges: {}, calendarChanges: {}, visibilityChanges: {}, linkChanges: {}, filterDefaultsChanges: {}, notifyChanges: {},
             roleDeletes: [], statusDeletes: [], typeDeletes: [], workDeletes: []
         };
     }
 
     function resetSectionState() {
-        roleChanges = {}; statusChanges = {}; typeChanges = {}; workChanges = {}; configChanges = {}; statusConfigChanges = {}; calendarChanges = {}; visibilityChanges = {}; filterDefaultsChanges = {}; notifyChanges = {};
+        roleChanges = {}; statusChanges = {}; typeChanges = {}; workChanges = {}; configChanges = {}; statusConfigChanges = {}; calendarChanges = {}; visibilityChanges = {}; linkChanges = {}; filterDefaultsChanges = {}; notifyChanges = {};
         roleDeletes = new Set(); statusDeletes = new Set(); typeDeletes = new Set(); workDeletes = new Set();
         undoStack = [];
         saveBar?.setUndoAvailable(false);
@@ -1080,6 +1108,7 @@
         renderWorkConfigToggles();
         renderWorkCalendar();
         renderVisibilitySection();
+        renderLinksSection();
         renderFilterDefaultsSection();
         renderNotifySection();
     }
@@ -1432,6 +1461,10 @@
             const list = reorderList(workBuffer().filter(w => w.role_id === roleId), dragState.id, id);
             list.forEach((w, i) => { (workChanges[w.id] ||= {}).sort_order = i + 1; });
             markDirty('section-worklist'); renderWork();
+        } else if (kind === 'link') {
+            const list = reorderList(linkBuffer().map(l => ({ ...l, id: String(l.slot) })), dragState.id, id);
+            linkChanges.quest_links = list.map(({ slot, label, active }) => ({ slot, label, active }));
+            markDirty('section-links'); renderLinksSection();
         }
         dragState = null;
     }
@@ -1638,6 +1671,7 @@
         renderWorkConfigToggles();
         renderWorkCalendar();
         renderVisibilitySection();
+        renderLinksSection();
         // renderFilterDefaultsSection() is NOT called here — it needs
         // originalRoles/originalStatuses/originalTypes, which load
         // concurrently with this in the same Promise.all in loadPage() and
@@ -1676,6 +1710,102 @@
         visibilityChanges.list_visibility = { ...v, [axis]: btn.dataset.val };
         markDirty('section-visibility');
         renderVisibilitySection();
+    }
+
+    // ═══════════════════════════════════════════
+    // Links — task link slots (label / on-off / order), rule 'quest_links'
+    // Slot N always maps to the same b_quest_list column (BQ_LINK_COLUMNS
+    // in b-quest.js); reordering only changes display order, and turning a
+    // slot off only hides it — nothing here ever touches task data.
+    // ═══════════════════════════════════════════
+    function linkBuffer() {
+        return normalizeQuestLinks(linkChanges.quest_links ?? originalConfig.quest_links);
+    }
+
+    // Active slots whose shown label (empty → "Link N") collides with
+    // another active slot's, case/space-insensitive.
+    function linkDuplicateSlots(list) {
+        const seen = {}, dup = new Set();
+        list.filter(l => l.active).forEach(l => {
+            const key = questLinkLabel(l).trim().toLowerCase();
+            if (seen[key]) { dup.add(seen[key]); dup.add(l.slot); }
+            else seen[key] = l.slot;
+        });
+        return dup;
+    }
+
+    function renderLinksSection() {
+        const list = linkBuffer();
+        const dup = linkDuplicateSlots(list);
+        document.getElementById('link-list').innerHTML = list.map(l => `
+            <div class="cfg-row ${l.active ? '' : 'is-inactive'}" data-slot="${l.slot}"
+                 draggable="true"
+                 ondragstart="dragStart(event, 'link', '${l.slot}')" ondragend="dragEnd(event)"
+                 ondragover="event.preventDefault()" ondragenter="dragEnterRow(event, 'link', '${l.slot}')" ondragleave="dragLeaveRow(event)"
+                 ondrop="dropOnRow(event, 'link', '${l.slot}')">
+                <div class="cfg-drag-handle cfg-col-drag"><i class="bi bi-grip-vertical"></i></div>
+                <span class="link-slot-tag">Link ${l.slot}</span>
+                <input class="cfg-name-input cfg-col-name ${dup.has(l.slot) ? 'is-invalid' : ''}" maxlength="${BQ_LINK_LABEL_MAX}"
+                       placeholder="Link ${l.slot}" value="${esc(l.label)}" oninput="onLinkField(${l.slot}, 'label', this.value)">
+                <div class="cfg-mini-toggle-wrap cfg-col-toggle">
+                    <label class="bq-toggle small">
+                        <input type="checkbox" ${l.active ? 'checked' : ''} onchange="onLinkField(${l.slot}, 'active', this.checked)">
+                        <span class="bq-slider"></span>
+                    </label>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function onLinkField(slot, field, value) {
+        const list = linkBuffer();
+        list.find(l => l.slot === slot)[field] = value;
+        linkChanges.quest_links = list;
+        markDirty('section-links');
+        if (field === 'active') { renderLinksSection(); return; }
+        // Label typing: no re-render (would drop the caret) — just refresh
+        // the duplicate marks in place.
+        const dup = linkDuplicateSlots(linkBuffer());
+        document.querySelectorAll('#link-list .cfg-row').forEach(row => {
+            row.querySelector('.cfg-name-input').classList.toggle('is-invalid', dup.has(Number(row.dataset.slot)));
+        });
+    }
+
+    // Runs before saveAll writes anything. Returns false to abort the save
+    // (duplicate labels, or the user backed out of hiding links in use).
+    async function validateLinksBeforeSave() {
+        if (!linkChanges.quest_links) return true;
+        const list = linkBuffer();
+        if (linkDuplicateSlots(list).size) {
+            renderLinksSection();
+            await Swal.fire('Duplicate link label', 'Each link that is turned on needs its own label.', 'warning');
+            return false;
+        }
+        const before = normalizeQuestLinks(originalConfig.quest_links);
+        const turnedOff = list.filter(l => !l.active && before.find(b => b.slot === l.slot).active);
+        if (turnedOff.length) {
+            const counts = await Promise.all(turnedOff.map(l => {
+                const col = BQ_LINK_COLUMNS[l.slot];
+                return supabaseClient.from('b_quest_list').select('id', { count: 'exact', head: true }).not(col, 'is', null).neq(col, '');
+            }));
+            const inUse = turnedOff
+                .map((l, i) => ({ label: questLinkLabel(before.find(b => b.slot === l.slot)), n: counts[i].error ? null : (counts[i].count || 0) }))
+                .filter(u => u.n !== 0);
+            if (inUse.length) {
+                const res = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Hide these links?',
+                    html: inUse.map(u => `<b>${esc(u.label)}</b> — ${u.n === null ? 'may be in use on some tasks' : `used on ${u.n} task${u.n > 1 ? 's' : ''}`}`).join('<br>')
+                        + '<br><br>They will be hidden, not deleted. Turning them back on shows them again.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Hide',
+                    cancelButtonText: 'Cancel'
+                });
+                if (!res.isConfirmed) return false;
+            }
+        }
+        linkChanges.quest_links = list; // persist the normalized (trimmed) form
+        return true;
     }
 
     // ═══════════════════════════════════════════
@@ -2489,6 +2619,7 @@
 
     async function saveAll() {
         try {
+            if (!(await validateLinksBeforeSave())) return;
             const errors = [];
             const roleIdMap = await saveTable('b_quest_role', roleChanges, roleDeletes, 'name', errors, 'Role');
             // A brand-new Role's Work items / Member grants staged in this
@@ -2522,7 +2653,7 @@
                 statusConfigChanges.default_status_id = resolvedStatusDefault;
             }
 
-            for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...visibilityChanges, ...filterDefaultsChanges, ...notifyChanges })) {
+            for (const [rule, value] of Object.entries({ ...configChanges, ...statusConfigChanges, ...calendarChanges, ...visibilityChanges, ...linkChanges, ...filterDefaultsChanges, ...notifyChanges })) {
                 const { error } = await supabaseClient.from('b_quest_setting').upsert({ rule, value });
                 if (error) errors.push('Settings update: ' + error.message);
             }

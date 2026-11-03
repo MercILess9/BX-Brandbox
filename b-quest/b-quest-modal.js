@@ -54,6 +54,43 @@ const B_QUEST_MODAL_HTML = `
     .bq-input-modern:hover { border-color: var(--c-accent); }
     .bq-input-modern:focus { outline: none; border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
     .was-validated .bq-input-modern:invalid { border-color: #dc3545 !important; background-color: #fff8f8; }
+    /* ── Links + Publish Date row (renderLinkZone) ──
+       mode-0: no links on → Publish Date takes the whole row.
+       mode-btn: 1-3 links → one button per link sharing the space, date
+       kept at a fixed width so it doesn't change size with the setting. */
+    .bq-link-date-row { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 10px; }
+    .bq-link-zone { flex: 1 1 0; min-width: 0; }
+    .bq-date-zone { flex: 1 1 0; min-width: 0; }
+    .bq-link-date-row.mode-0 .bq-link-zone { display: none; }
+    .bq-link-date-row.mode-btn .bq-date-zone { flex: 0 0 130px; }
+    @media (max-width: 767.98px) {
+        .bq-link-date-row { flex-wrap: wrap; }
+        .bq-link-date-row .bq-link-zone, .bq-link-date-row .bq-date-zone { flex: 1 1 100% !important; }
+    }
+    .bq-link-btns { display: flex; gap: 6px; }
+    .bq-link-btn { flex: 1 1 0; min-width: 0; height: 35px; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 0 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-size: 0.8rem; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.2s; }
+    .bq-link-btn i { flex-shrink: 0; font-size: 0.95rem; }
+    .bq-link-btn .bq-link-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bq-link-btn:hover, .bq-link-btn.is-open { border-color: var(--c-accent); background: #fff; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb), 0.12); }
+    .bq-link-btn.is-filled { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+
+    .bq-link-pop { position: fixed; z-index: 1200; display: none; flex-direction: column; gap: 8px; width: min(440px, calc(100vw - 32px)); background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; box-shadow: 0 12px 32px rgba(15,23,42,0.16); }
+    .bq-link-pop.show { display: flex; }
+    .bq-link-pop-label { font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Wraps instead of scrolling sideways — most links (Drive, Figma) are
+       far longer than one line, and seeing the whole URL is how you check
+       you pasted the right one. ~150 chars visible across 3 lines. */
+    .bq-link-pop .bq-input-modern { height: auto; text-align: left; text-align-last: left; resize: none; line-height: 1.45; padding: 8px 12px; word-break: break-all; }
+    .bq-link-pop .bq-input-modern.is-invalid { border-color: #dc3545; background: #fff8f8; }
+    .bq-link-pop-error { display: none; margin-top: -2px; font-size: 0.72rem; font-weight: 600; color: #dc3545; }
+    .bq-link-pop.has-error .bq-link-pop-error { display: block; }
+    .bq-link-pop-actions { display: flex; justify-content: space-between; align-items: center; }
+    .bq-link-pop-clear { background: none; border: none; padding: 4px 6px; font-family: inherit; font-size: 0.75rem; font-weight: 700; color: #94a3b8; cursor: pointer; border-radius: 6px; }
+    .bq-link-pop-clear:hover:not(:disabled) { color: #ef4444; background: #fef2f2; }
+    .bq-link-pop-clear:disabled { opacity: 0.4; cursor: default; }
+    .bq-link-pop-ok { background: var(--c-dark); color: var(--c-accent); border: none; height: 30px; padding: 0 18px; border-radius: 8px; font-family: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
+    .bq-link-pop-ok:hover { background: #0f172a; }
+
     .bq-input-detail { flex-grow: 1; min-height: 100px; text-align: left !important; text-align-last: left !important; resize: none; padding-top: 10px; }
 
     /* Type/Work custom picker — a native <select> can't be restyled (its
@@ -346,12 +383,10 @@ const B_QUEST_MODAL_HTML = `
                                 </div>
                                 <label class="bq-label-modern">Task Name</label>
                                 <input type="text" class="bq-input-modern" style="text-align-last: left;" id="b-quest-modal-taskname" name="task_name" required>
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-8">
-                                        <label class="bq-label-modern">Link</label>
-                                        <input type="text" class="bq-input-modern m-0" style="text-align-last: left;" id="b-quest-modal-link" name="link">
-                                    </div>
-                                    <div class="col-md-4">
+                                <div class="bq-link-date-row mode-btn" id="bq-link-date-row">
+                                    <!-- Filled by renderLinkZone() on every open, from Settings → Links -->
+                                    <div class="bq-link-zone" id="bq-link-zone"></div>
+                                    <div class="bq-date-zone">
                                         <label class="bq-label-modern text-center d-block">Publish Date</label>
                                         <input type="text" class="bq-input-modern m-0" id="b-quest-modal-publish-date" name="publish_date" required>
                                     </div>
@@ -379,6 +414,18 @@ const B_QUEST_MODAL_HTML = `
             </form>
         </div>
     </div>
+    <!-- Link popover lives inside the modal element (not <body>) for the
+         same FocusTrap reason as select-picker.js's panel; position:fixed
+         still places it relative to the viewport. -->
+    <div class="bq-link-pop" id="bq-link-pop">
+        <div class="bq-link-pop-label" id="bq-link-pop-label"></div>
+        <textarea class="bq-input-modern m-0" id="bq-link-pop-input" rows="3" maxlength="2000" placeholder="https://..." autocomplete="off" spellcheck="false"></textarea>
+        <div class="bq-link-pop-error" id="bq-link-pop-error">Enter a full link starting with http:// or https://</div>
+        <div class="bq-link-pop-actions">
+            <button type="button" class="bq-link-pop-clear" id="bq-link-pop-clear" onclick="BQuestApp.clearLinkPopover()">Clear</button>
+            <button type="button" class="bq-link-pop-ok" onclick="BQuestApp.commitLinkPopover()">OK</button>
+        </div>
+    </div>
 </div>
 `;
 
@@ -399,6 +446,7 @@ const BQuestApp = (() => {
     // designer_*/creative_* flat columns, and no more "only these two roles
     // are actually saveable" limitation.
     const State = { capacities: {}, maxCap: {}, maxCapEffective: {}, workCounts: {}, workLimits: {}, assignProfiles: { _loaded: false }, visibleRoles: [], roleNameById: {}, typeList: [], statusList: [], defaultStatusId: null, workdayWeight: null, mergeCompanyHolidays: false, holidays: [], currentRoleRows: {}, allowAssign: false, currentData: null,
+        linkCfg: null, // Settings → Links (normalizeQuestLinks), loaded once per page via loadQuestLinkConfig()
         deadlinePickers: {} }; // roleId -> attachDatePicker() handle, rebuilt every renderRoleCards()+setupDropdowns() cycle since role cards are fully re-rendered per modal open
     const el = id => document.getElementById(id);
     const show = (id, condition, display = 'block') => { const e = el(id); if(e) e.style.display = condition ? display : 'none'; };
@@ -644,13 +692,13 @@ const BQuestApp = (() => {
             'account_name': 'b-quest-modal-account',
             'opportunity_name': 'b-quest-modal-opportunity',
             'task_name': 'b-quest-modal-taskname',
-            'link': 'b-quest-modal-link',
             'detail': 'b-quest-modal-detail'
         };
         for (let key in fields) {
             const element = el(fields[key]);
             if (element) element.value = data[key] || '';
         }
+        fillLinkInputs(data);
         publishDatePicker.setValue(data.publish_date || null);
         if (data.owner !== undefined) { el('modal-owner-display').innerText = data.owner || '—'; setModalOwnerAvatar(data.owner); }
     }
@@ -1108,6 +1156,140 @@ const BQuestApp = (() => {
     // torn down.
     el('b-quest-modal')?.addEventListener('hidden.bs.modal', () => { if (typeof closeSelectPicker === 'function') closeSelectPicker(); });
 
+    // ── Links row (Settings → Links) ──
+    // Re-rendered on every open so the inputs are always fresh — and only
+    // ACTIVE slots get an input at all. A slot that's turned off sends
+    // nothing in the payload, so its saved link stays untouched on Edit
+    // (an empty input for it would overwrite the saved link with null).
+    // Each link is a button + popover; the value carriers are type="text" + hidden attribute, NOT
+    // type="hidden": form.reset() doesn't clear a type="hidden" input (see
+    // openModal), which would leak one task's links into the next New.
+    function renderLinkZone() {
+        closeLinkPopover();
+        const active = (State.linkCfg || normalizeQuestLinks(null)).filter(s => s.active);
+        const row = el('bq-link-date-row');
+        row.classList.remove('mode-0', 'mode-btn');
+        row.classList.add(active.length ? 'mode-btn' : 'mode-0');
+        const zone = el('bq-link-zone');
+        if (active.length) {
+            zone.innerHTML = `<label class="bq-label-modern">${active.length > 1 ? 'Links' : 'Link'}</label>
+                <div class="bq-link-btns">${active.map(s => `
+                    <button type="button" class="bq-link-btn" id="bq-link-btn-${s.slot}" onclick="BQuestApp.openLinkPopover(${s.slot})">
+                        <i class="bi bi-link-45deg"></i><span class="bq-link-text">${esc(questLinkLabel(s))}</span>
+                    </button>
+                    <input type="text" hidden id="b-quest-modal-link-${s.slot}" name="${BQ_LINK_COLUMNS[s.slot]}">`).join('')}
+                </div>`;
+        } else {
+            zone.innerHTML = '';
+        }
+        active.forEach(s => syncLinkBtn(s.slot));
+    }
+
+    // Filled = accent fill + border; tooltip carries the URL itself.
+    function syncLinkBtn(slot) {
+        const btn = el(`bq-link-btn-${slot}`);
+        if (!btn) return;
+        const val = el(`b-quest-modal-link-${slot}`)?.value || '';
+        const label = questLinkLabel((State.linkCfg || normalizeQuestLinks(null)).find(s => s.slot === slot));
+        btn.classList.toggle('is-filled', !!val);
+        btn.title = val ? `${label}: ${val}` : `Add ${label}`;
+    }
+
+    function fillLinkInputs(data) {
+        (State.linkCfg || []).filter(s => s.active).forEach(s => {
+            const input = el(`b-quest-modal-link-${s.slot}`);
+            if (input) input.value = data?.[BQ_LINK_COLUMNS[s.slot]] || '';
+            syncLinkBtn(s.slot);
+        });
+    }
+
+    // Popover: label / input / Clear + OK. OK or Enter keeps the value,
+    // Clear empties it, Esc / outside click / scroll closes without change.
+    let linkPopSlot = null;
+
+    function openLinkPopover(slot) {
+        if (linkPopSlot === slot) { closeLinkPopover(); return; }
+        closeLinkPopover();
+        const btn = el(`bq-link-btn-${slot}`);
+        const pop = el('bq-link-pop');
+        const input = el('bq-link-pop-input');
+        const current = el(`b-quest-modal-link-${slot}`).value;
+        linkPopSlot = slot;
+        el('bq-link-pop-label').textContent = questLinkLabel(State.linkCfg.find(s => s.slot === slot));
+        input.value = current;
+        el('bq-link-pop-clear').disabled = !current;
+        setLinkError(false);
+        btn.classList.add('is-open');
+        pop.classList.add('show');
+
+        const r = btn.getBoundingClientRect();
+        const w = pop.offsetWidth, h = pop.offsetHeight;
+        pop.style.left = Math.min(Math.max(16, r.left), window.innerWidth - w - 16) + 'px';
+        pop.style.top = (r.bottom + 6 + h > window.innerHeight - 12 ? Math.max(12, r.top - h - 6) : r.bottom + 6) + 'px';
+        input.focus();
+        input.select();
+        setTimeout(() => document.addEventListener('mousedown', onLinkPopOutside, true), 0);
+    }
+
+    function closeLinkPopover() {
+        if (linkPopSlot === null) return;
+        el(`bq-link-btn-${linkPopSlot}`)?.classList.remove('is-open');
+        el('bq-link-pop').classList.remove('show');
+        document.removeEventListener('mousedown', onLinkPopOutside, true);
+        linkPopSlot = null;
+    }
+
+    // Basic format check: must parse as a URL, be http(s) — the only
+    // schemes safeLink() will ever open — and have a dotted host.
+    function isValidLink(value) {
+        try {
+            const u = new URL(value);
+            return (u.protocol === 'http:' || u.protocol === 'https:') && u.hostname.includes('.');
+        } catch { return false; }
+    }
+
+    function setLinkError(on) {
+        el('bq-link-pop').classList.toggle('has-error', on);
+        el('bq-link-pop-input').classList.toggle('is-invalid', on);
+    }
+
+    // OK / Enter. Empty is allowed (same as Clear); anything else must pass
+    // isValidLink() or the popover stays open showing the error.
+    function commitLinkValue(value) {
+        const clean = value.replace(/\s+/g, '');
+        if (clean && !isValidLink(clean)) { setLinkError(true); el('bq-link-pop-input').focus(); return; }
+        setLinkValue(clean);
+    }
+
+    function setLinkValue(value) {
+        const slot = linkPopSlot;
+        const input = el(`b-quest-modal-link-${slot}`);
+        // A URL never contains whitespace — drop line breaks/spaces a paste
+        // can drag in (the popover's field is a wrapping textarea).
+        if (input) input.value = value.replace(/\s+/g, '');
+        closeLinkPopover();
+        syncLinkBtn(slot);
+    }
+
+    function onLinkPopOutside(e) {
+        if (el('bq-link-pop').contains(e.target)) return;
+        // Clicking the same button again toggles via openLinkPopover itself.
+        if (e.target.closest(`#bq-link-btn-${linkPopSlot}`)) return;
+        closeLinkPopover();
+    }
+
+    el('bq-link-pop-input')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commitLinkValue(e.target.value); }
+        // Esc would otherwise also close the whole Bootstrap modal.
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeLinkPopover(); }
+    });
+    el('bq-link-pop-input')?.addEventListener('input', e => { el('bq-link-pop-clear').disabled = !e.target.value; setLinkError(false); });
+    // Fixed-position popover would drift off its button if anything behind
+    // it scrolls — close instead, same as select-picker.js.
+    el('b-quest-modal')?.addEventListener('scroll', e => { if (!el('bq-link-pop').contains(e.target)) closeLinkPopover(); }, true);
+    window.addEventListener('resize', () => closeLinkPopover());
+    el('b-quest-modal')?.addEventListener('hidden.bs.modal', () => closeLinkPopover());
+
     // Re-draws attention to a field already marked invalid from a previous
     // submit attempt — ref b-opportunity-modal.js's own shakeInvalid().
     // Picker-wrapped fields (.bq-picker-wrap) style their visible trigger
@@ -1123,6 +1305,9 @@ const BQuestApp = (() => {
     }
 
     return {
+        openLinkPopover,
+        commitLinkPopover() { commitLinkValue(el('bq-link-pop-input').value); },
+        clearLinkPopover() { setLinkValue(''); },
         async openModal(taskId = null, workData = []) {
             const form = el('b-quest-modal-form');
             form.reset(); form.classList.remove('was-validated');
@@ -1134,8 +1319,10 @@ const BQuestApp = (() => {
             el('b-quest-modal-id').value = '';
             State.currentData = null;
             State.currentRoleRows = {};
-            await Promise.all([loadVisibleRoles(), BQuestService.loadStatuses(), BQuestService.loadWorkdayWeight()]);
+            const [, , , linkCfg] = await Promise.all([loadVisibleRoles(), BQuestService.loadStatuses(), BQuestService.loadWorkdayWeight(), loadQuestLinkConfig()]);
+            State.linkCfg = linkCfg;
             renderRoleCards();
+            renderLinkZone();
             await Promise.all([BQuestService.loadProfiles(), BQuestService.loadTypes()]);
             setupDropdowns(workData);
 
@@ -1282,7 +1469,7 @@ const BQuestApp = (() => {
             // added to clean up existing ones; this stops new ones at
             // the source instead).
             Object.keys(payload).forEach(k => { if (typeof payload[k] === 'string') payload[k] = payload[k].trim(); });
-            ['publish_date', 'detail', 'link'].forEach(f => { if (payload[f] === '') payload[f] = null; });
+            ['publish_date', 'detail', ...Object.values(BQ_LINK_COLUMNS)].forEach(f => { if (payload[f] === '') payload[f] = null; });
             // id used to be a UUID (36 chars), hence the old length check —
             // it's now the short "BQ-0001" text id (never > 10 chars), so
             // that check was silently always false, meaning every Edit
@@ -1384,8 +1571,10 @@ const BQuestApp = (() => {
             form.reset(); form.classList.remove('was-validated');
             State.currentData = null;
             State.currentRoleRows = {};
-            await Promise.all([loadVisibleRoles(), BQuestService.loadStatuses(), BQuestService.loadWorkdayWeight()]);
+            const [, , , linkCfg] = await Promise.all([loadVisibleRoles(), BQuestService.loadStatuses(), BQuestService.loadWorkdayWeight(), loadQuestLinkConfig()]);
+            State.linkCfg = linkCfg;
             renderRoleCards();
+            renderLinkZone();
             await Promise.all([BQuestService.loadProfiles(), BQuestService.loadTypes()]);
             setupDropdowns(workData);
 
@@ -1432,6 +1621,8 @@ const BQuestApp = (() => {
                 opportunity_name: data.opportunity_name,
                 task_name: (data.task_name || '') + ' - Copy',
                 link: data.link,
+                link_2: data.link_2,
+                link_3: data.link_3,
                 publish_date: data.publish_date,
                 detail: data.detail
             };
