@@ -573,6 +573,16 @@
             shell.toggle(p.y, p.m);
         });
 
+        // Touch screens: tapping the field opens the calendar instead of
+        // a numeric keyboard (which also covered the calendar). Not
+        // readOnly — that would exempt the field from `required`. The tap
+        // first closes the panel via the shell's outside-click handler
+        // (the field isn't its clickAnchor), so this always reopens.
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            display.inputMode = 'none';
+            display.addEventListener('click', () => iconBtn.click());
+        }
+
         // A native form.reset() already blanks both fields' values on its
         // own (any <input> descendant of the form, hidden or not) — but it
         // doesn't know about setCustomValidity, so a stale "Invalid date"
