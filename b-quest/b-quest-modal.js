@@ -91,6 +91,39 @@ const B_QUEST_MODAL_HTML = `
     .bq-link-pop-ok { background: var(--c-dark); color: var(--c-accent); border: none; height: 30px; padding: 0 18px; border-radius: 8px; font-family: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
     .bq-link-pop-ok:hover { background: #0f172a; }
 
+    /* ── Below lg the two columns already stack (col-lg-6), so the role
+       column's JS max-height (syncRoleColHeight) would only trap it in a
+       box as tall as the form above it — let it run its full height. ── */
+    @media (max-width: 991.98px) {
+        #b-quest-modal .bq-role-col { max-height: none !important; overflow: visible; padding-right: 0; }
+        #b-quest-modal .bq-role-col-wrap::after { display: none; }
+    }
+    /* ── Phone: full screen, header and Save footer pinned, only the form
+       scrolls. Inputs go to 16px — iOS zooms into any smaller focused
+       field. The link popover drops its anchor-to-button placement for a
+       sheet pinned to the top (openLinkPopover skips positioning when
+       isLinkSheet()), so the keyboard can never cover it. ── */
+    @media (max-width: 767.98px) {
+        #b-quest-modal .modal-dialog { margin: 0; width: 100%; max-width: none !important; height: 100%; min-height: 100%; align-items: stretch; }
+        #b-quest-modal .modal-content { height: 100%; border-radius: 0; display: flex; flex-direction: column; }
+        #b-quest-modal form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .bq-modern-header { flex-shrink: 0; padding: 10px 16px; }
+        .bq-modern-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; -webkit-overflow-scrolling: touch; }
+        .bq-main-row { --bs-gutter-y: 1rem; }
+        .bq-glass-card { padding: 14px; height: auto; }
+        /* #b-quest-modal prefix: these rules' base versions are declared
+           further down this block, so plain class selectors would lose. */
+        #b-quest-modal .bq-footer-actions { flex-shrink: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+        #b-quest-modal .btn-bq-create { flex: 1; justify-content: center; height: 44px; }
+        #b-quest-modal .btn-bq-delete { height: 44px; }
+        #b-quest-modal .bq-input-modern, #b-quest-modal .bq-picker-trigger, .bq-link-pop .bq-input-modern { font-size: 16px; }
+        #b-quest-modal .bq-input-modern:not(textarea), #b-quest-modal .bq-picker-trigger, .bq-link-btn, #b-quest-modal .bq-search-btn { height: 42px; }
+        .bq-input-detail { min-height: 120px; }
+        #b-quest-modal .role-card-header { padding: 12px 14px; }
+        #b-quest-modal .bq-search-card { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 16px; }
+        .bq-link-pop { left: 12px !important; right: 12px; top: 12px !important; width: auto; }
+    }
+
     .bq-input-detail { flex-grow: 1; min-height: 100px; text-align: left !important; text-align-last: left !important; resize: none; padding-top: 10px; }
 
     /* Type/Work custom picker — a native <select> can't be restyled (its
@@ -1207,6 +1240,9 @@ const BQuestApp = (() => {
     // Clear empties it, Esc / outside click / scroll closes without change.
     let linkPopSlot = null;
 
+    // Same breakpoint as the modal's phone CSS (full screen + pinned sheet).
+    function isLinkSheet() { return window.matchMedia('(max-width: 767.98px)').matches; }
+
     function openLinkPopover(slot) {
         if (linkPopSlot === slot) { closeLinkPopover(); return; }
         closeLinkPopover();
@@ -1222,10 +1258,12 @@ const BQuestApp = (() => {
         btn.classList.add('is-open');
         pop.classList.add('show');
 
-        const r = btn.getBoundingClientRect();
-        const w = pop.offsetWidth, h = pop.offsetHeight;
-        pop.style.left = Math.min(Math.max(16, r.left), window.innerWidth - w - 16) + 'px';
-        pop.style.top = (r.bottom + 6 + h > window.innerHeight - 12 ? Math.max(12, r.top - h - 6) : r.bottom + 6) + 'px';
+        if (!isLinkSheet()) {
+            const r = btn.getBoundingClientRect();
+            const w = pop.offsetWidth, h = pop.offsetHeight;
+            pop.style.left = Math.min(Math.max(16, r.left), window.innerWidth - w - 16) + 'px';
+            pop.style.top = (r.bottom + 6 + h > window.innerHeight - 12 ? Math.max(12, r.top - h - 6) : r.bottom + 6) + 'px';
+        }
         input.focus();
         input.select();
         setTimeout(() => document.addEventListener('mousedown', onLinkPopOutside, true), 0);
@@ -1286,8 +1324,11 @@ const BQuestApp = (() => {
     el('bq-link-pop-input')?.addEventListener('input', e => { el('bq-link-pop-clear').disabled = !e.target.value; setLinkError(false); });
     // Fixed-position popover would drift off its button if anything behind
     // it scrolls — close instead, same as select-picker.js.
-    el('b-quest-modal')?.addEventListener('scroll', e => { if (!el('bq-link-pop').contains(e.target)) closeLinkPopover(); }, true);
-    window.addEventListener('resize', () => closeLinkPopover());
+    // Phone sheet is pinned, not anchored, so neither applies — and the
+    // keyboard opening fires both (resize on Android, scroll on iOS),
+    // which would shut the sheet the moment its own field got focus.
+    el('b-quest-modal')?.addEventListener('scroll', e => { if (!isLinkSheet() && !el('bq-link-pop').contains(e.target)) closeLinkPopover(); }, true);
+    window.addEventListener('resize', () => { if (!isLinkSheet()) closeLinkPopover(); });
     el('b-quest-modal')?.addEventListener('hidden.bs.modal', () => closeLinkPopover());
 
     // Re-draws attention to a field already marked invalid from a previous
