@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <title>Brandbox | Sign Up</title>
-    <meta name="description" content="Create an account on the Brandbox / Brandstrom X portal.">
+    <title>Sign Up</title>
+    <meta name="description" content="Create an account.">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,83 +13,19 @@
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/select-picker.js"></script>
-    <script src="/auth/auth.js"></script>
+    <script src="/auth/auth.js?v=3"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="/system/theme.css">
-
-    <style>
-        :root {
-            --brand-accent-dark: rgb(45, 71, 57);
-            --brand-accent: rgb(189, 196, 50);
-            --font-main: "Outfit", sans-serif;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-main); }
-        body {
-            background: linear-gradient(135deg, var(--brand-accent-dark) 0%, var(--brand-accent) 100%);
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; padding: 20px;
-        }
-        .card {
-            background: #fff; padding: 2.5rem; border-radius: 24px;
-            width: 100%; max-width: 450px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
-        }
-        .logo-wrap { text-align: center; margin-bottom: 2rem; margin-top: 0.5rem; }
-        .logo-wrap img { height: 80px; object-fit: contain; }
-        .group { margin-bottom: 1.2rem; }
-        label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #333; }
-        .input-wrapper { position: relative; display: flex; align-items: center; }
-        input, select {
-            width: 100%; padding: 12px 16px; border: 1.5px solid #eee;
-            border-radius: 12px; font-size: 15px; outline: none; transition: 0.2s;
-            background: #fff;
-        }
-        input:focus, select:focus { border-color: var(--brand-accent); background: #fafbf2; }
-        /* Department picker — a native <select> popup can't be restyled to
-           match this card, so the select stays as the real (required,
-           validated) form control — kept "rendered" via opacity:0 rather
-           than display:none, which the constraint-validation spec
-           excludes from validation entirely — and a styled button drives
-           it via /system/select-picker.js, the same shared component used
-           elsewhere in the app. */
-        .dept-picker-wrap { position: relative; }
-        .dept-picker-wrap select { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
-        .dept-picker-trigger { position: relative; width: 100%; padding: 12px 34px 12px 16px; border: 1.5px solid #eee; border-radius: 12px; font-size: 15px; outline: none; transition: 0.2s; background: #fff; text-align: left; cursor: pointer; font-family: inherit; color: #000; }
-        .dept-picker-trigger::after {
-            content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-            width: 11px; height: 11px; opacity: 0.5; pointer-events: none;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%23888' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain;
-        }
-        .pass-input { padding-right: 45px !important; }
-        .password-toggle-btn {
-            position: absolute; right: 15px;
-            background: none; border: none; cursor: pointer;
-            color: #888; display: flex; align-items: center;
-            padding: 0; z-index: 10;
-        }
-        .row { display: flex; gap: 0.8rem; }
-        .row .group { flex: 1; }
-        .btn-main {
-            width: 100%; padding: 16px; background: var(--brand-accent);
-            border: none; border-radius: 12px; color: #fff;
-            font-weight: 700; font-size: 16px; cursor: pointer;
-            margin-top: 1rem; transition: 0.2s;
-        }
-        .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
-        .link { text-align: center; margin-top: 1.5rem; font-size: 14px; color: #666; }
-        .link a { color: #000; text-decoration: none; font-weight: 700; }
-
-        .signup-closed-msg { text-align: center; padding: 1rem 0 0.5rem; }
-        .signup-closed-msg h2 { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; }
-        .signup-closed-msg p { font-size: 0.88rem; color: #666; line-height: 1.5; margin-bottom: 1.5rem; }
-        .signup-closed-back { display: inline-block; background: var(--brand-accent); color: #fff; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 12px; text-decoration: none; transition: 0.2s; }
-        .signup-closed-back:hover { opacity: 0.9; }
-    </style>
+    <link rel="stylesheet" href="/auth/auth.css?v=2">
 </head>
 <body>
 
 <div class="card">
     <div class="logo-wrap">
-        <img id="brandbox-logo" src="" alt="Brandbox" height="80">
+        <img id="brandbox-logo" class="is-pending" alt="Logo" height="80">
     </div>
 
     <div id="signup-closed-msg" class="signup-closed-msg" style="display:none;">
@@ -97,30 +34,30 @@
         <a href="login.html" class="signup-closed-back">Back to Sign In</a>
     </div>
 
-    <form id="regForm">
+    <form novalidate id="regForm">
         <div class="row">
             <div class="group">
-                <label>Nick Name</label>
-                <input id="nick" placeholder="Nick name" required>
+                <label for="nick">Nick Name</label>
+                <input id="nick" autocomplete="nickname" placeholder="Nick name" required>
             </div>
             <div class="group">
-                <label>Employer ID</label>
-                <input id="emp_id" placeholder="BX001" required>
+                <label for="emp_id">Employee ID</label>
+                <input id="emp_id" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ID001" required>
             </div>
         </div>
 
         <div class="group">
-            <label>Full Name</label>
-            <input id="full" placeholder="Full name" required>
+            <label for="full">Full Name</label>
+            <input id="full" autocomplete="name" placeholder="Full name" required>
         </div>
 
         <div class="group">
-            <label>Email Address</label>
-            <input id="email_val" type="email" placeholder="example@email.com" required>
+            <label for="email_val">Email Address</label>
+            <input id="email_val" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="name@company.com" required>
         </div>
 
         <div class="group">
-            <label>Department</label>
+            <label for="dept_val">Department</label>
             <div class="dept-picker-wrap">
                 <select id="dept_val" required>
                     <option value="">Select Department</option>
@@ -130,21 +67,21 @@
         </div>
 
         <div class="group">
-            <label>Password</label>
+            <label for="pass_val">Password</label>
             <div class="input-wrapper">
-                <input id="pass_val" type="password" class="pass-input" placeholder="Min 6 characters" required minlength="6">
-                <button type="button" class="password-toggle-btn" onclick="togglePass('pass_val', this)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <input id="pass_val" type="password" class="pass-input" autocomplete="new-password" placeholder="Min 6 characters" required minlength="6">
+                <button type="button" class="password-toggle-btn" onclick="togglePass('pass_val', this)" aria-label="Show password">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 </button>
             </div>
         </div>
 
         <div class="group">
-            <label>Confirm Password</label>
+            <label for="conf_val">Confirm Password</label>
             <div class="input-wrapper">
-                <input id="conf_val" type="password" class="pass-input" placeholder="Repeat password" required>
-                <button type="button" class="password-toggle-btn" onclick="togglePass('conf_val', this)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <input id="conf_val" type="password" class="pass-input" autocomplete="new-password" placeholder="Repeat password" required>
+                <button type="button" class="password-toggle-btn" onclick="togglePass('conf_val', this)" aria-label="Show password">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 </button>
             </div>
         </div>
@@ -157,12 +94,9 @@
 
 
 <script>
-    document.getElementById('brandbox-logo').src = LOGO_URL;
-    // signup.html never calls initLayout() (no session yet, nothing to
-    // guard), so it misses the branding sync that piggybacks on it
-    // elsewhere — call the same two halves directly instead.
-    applyCachedBranding();
-    refreshBranding();
+    // Branding (logo, theme colours) + the email example from Settings →
+    // Signup's domain lock — see initAuthPage() in auth.js.
+    initAuthPage({ emailInputId: 'email_val' });
 
     // Block the form up front when signups are closed, instead of letting
     // someone fill it out and hit the misleading generic error at submit
@@ -200,29 +134,21 @@
                 select.value = value;
                 triggerBtn.textContent = value;
                 triggerBtn.classList.remove('placeholder');
+                select.dispatchEvent(new Event('change')); // clears an inline "required" error
             },
         });
     }
 
-    function togglePass(id, btn) {
-        const input = document.getElementById(id);
-        const isPass = input.type === "password";
-        input.type = isPass ? "text" : "password";
-        btn.innerHTML = isPass ?
-            `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>` :
-            `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
-    }
-
     document.getElementById("regForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (!validateAuthForm(form)) return;
 
-        const email = document.getElementById("email_val").value;
+        const email = document.getElementById("email_val").value.trim();
         const password = document.getElementById("pass_val").value;
         const confirm = document.getElementById("conf_val").value;
 
-        if (password !== confirm) {
-            return Swal.fire("Error", "Passwords do not match!", "error");
-        }
+        if (password !== confirm) return setFieldError('conf_val', 'Passwords do not match.');
 
         // Checked client-side first — the server-side rejection for this
         // gets swallowed into a generic "Database error" before it reaches
@@ -230,7 +156,7 @@
         // comment), so relying on that round trip shows the wrong message.
         const domainOk = await isEmailDomainAllowed(email);
         if (!domainOk) {
-            return Swal.fire("Error", "This email domain is not allowed to register.", "error");
+            return setFieldError('email_val', 'This email domain is not allowed to register.');
         }
 
         const employee_id = document.getElementById("emp_id").value.trim();
@@ -242,7 +168,7 @@
             full_name: document.getElementById("full").value.trim(),
             department: document.getElementById("dept_val").value
         };
-        await handleSignup(email, password, metadata);
+        await handleSignup(email, password, metadata, form);
     });
 </script>
 
