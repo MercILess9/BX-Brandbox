@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-QUEST | Dashboard</title>
 
@@ -10,1206 +11,705 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
+    <script src="/system/select-picker.js"></script>
+    <script src="/system/date-picker.js"></script>
     <script src="b-quest.js"></script>
+    <script src="b-quest-assign-picker.js"></script>
+    <!-- Same Edit modal as the List page (self-injects into <body>, so defer). -->
+    <script src="b-quest-modal.js?v=17" defer></script>
     <link rel="stylesheet" href="/system/theme.css">
+    <link rel="stylesheet" href="b-quest.css?v=2">
 
+    <!-- B-Quest Dashboard (rebuilt 2026-11). Styling follows the B-Quest Settings
+         page: white .section boxes with an uppercase .section-header,
+         the List page's sliding Role segment (All + one role), the shared
+         select-picker for Person, Settings' horizontal carousel for the
+         per-role capacity charts.
+         Top bar: Month · Role · Person — apply to the whole page.
+         Row 1:   Calendar (left) | that day's tasks (right, same height,
+                  scrolls inside).
+         Row 2:   Daily Capacity — one chart card per role, side by side,
+                  scrolls sideways past 2 roles.
+         Row 3:   Tasks — by Opportunity / by Owner, rows expand. -->
     <style>
-        /* --c-accent / --c-accent-light / --c-accent-dark come from
-           /system/theme.css (linked above) — don't redeclare here. */
-        :root {
-            --c-dark: #1e293b;
-            --c-bg: #f8fafc;
-            --c-muted: #94a3b8;
-            --c-slate: #626e7f;
-            --c-border: #e2e8f0;
-            --c-des: #3b82f6;
-            --c-des-bg: #eff6ff;
-            --c-des-border: #dbeafe;
-            --c-cre: #8b5cf6;
-            --c-cre-bg: #f5f3ff;
-            --c-cre-border: #ede9fe;
-        }
+        body { padding-bottom: 80px; }
+        html, body { overflow-x: hidden; max-width: 100%; }
 
-        body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); color: var(--c-dark); margin: 0; padding-bottom: 80px; }
+        /* ── Top bar ── */
+        .dash-ctrl { background: #fff; border-bottom: 1px solid var(--c-border); padding: 10px 20px; position: sticky; top: 64px; z-index: 100; }
+        .dash-ctrl-inner { max-width: 1300px; margin: 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .month-box { position: relative; display: flex; align-items: center; height: 38px; border: 1px solid var(--c-border); border-radius: 20px; background: #fff; }
+        .month-box .flt-select-tag { border-radius: 20px 0 0 20px; border-right: 1px solid var(--c-border); }
+        .month-nav { border: none; background: none; width: 30px; height: 100%; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .month-nav:hover { color: var(--c-accent-dark); }
+        .month-label { border: none; background: none; min-width: 96px; font-size: 0.8rem; font-weight: 700; color: var(--c-slate); cursor: pointer; font-family: inherit; }
+        .month-label:hover { color: var(--c-accent-dark); }
+        .month-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 200; background: #fff; border: 1px solid var(--c-border); border-radius: 14px; box-shadow: 0 14px 34px rgba(0,0,0,0.12); padding: 10px; width: 240px; display: none; }
+        .month-pop.show { display: block; }
+        .month-pop-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-weight: 800; font-size: 0.82rem; color: var(--c-dark); }
+        .month-pop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .month-pop-grid button { border: none; background: var(--c-bg); border-radius: 8px; height: 32px; font-size: 0.75rem; font-weight: 700; color: var(--c-slate); cursor: pointer; font-family: inherit; }
+        .month-pop-grid button:hover { background: var(--c-accent-light); color: var(--c-accent-dark); }
+        .month-pop-grid button.active { background: var(--c-dark); color: var(--c-accent); }
+        .ctrl-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .role-seg-wrap { max-width: 420px; }
+        .person-box { width: 210px; cursor: pointer; }
+        .person-box .flt-select-input { position: relative; display: block; text-align: center; line-height: 36px; padding: 0 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 100%; }
+        .person-box .flt-select-input::after { content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 9px; height: 9px; opacity: 0.5; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat center / contain; }
+        .icon-btn { border: 1px solid var(--c-border); background: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer; flex-shrink: 0; transition: 0.15s; }
+        .icon-btn:hover { border-color: var(--c-accent); color: var(--c-accent-dark); }
 
-        /* ── Control Bar ── */
-        .ctrl-bar { background: #fff; border-bottom: 1px solid var(--c-border); padding: 10px 20px; position: sticky; top: 0; z-index: 200; }
-        /* .dash-wrapper below (max-width:1300+margin:auto) adds its own
-           20px horizontal padding on top of that box; this one didn't, so
-           its content sat flush with the raw 1300px box edge while the
-           dashboard content sits 20px further in — same bug as B-Quest
-           List's filter zone (see bquest-filter-zone-reusable-pattern
-           memory), same fix. */
-        .ctrl-inner { max-width: 1300px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 12px; }
-        .month-nav { display: flex; align-items: center; gap: 6px; position: relative; }
-        .month-nav-btn { border: 1px solid var(--c-border); background: #fff; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--c-slate); transition: 0.15s; font-size: 0.82rem; }
-        .month-nav-btn:hover { background: var(--c-bg); border-color: #cbd5e1; }
+        .dash-wrap { max-width: 1300px; margin: 0 auto; padding: 24px 20px 0; }
+        .page-header { margin-bottom: 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .page-header .upd { margin-left: auto; font-size: 0.7rem; color: #94a3b8; }
+        .count-badge { font-size: 0.66rem; font-weight: 700; color: var(--c-slate); text-transform: none; letter-spacing: 0; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 1px 9px; }
+        .section-header { gap: 10px; flex-wrap: wrap; }
+        .section-header .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 
-        .month-label-btn { border: 1px solid var(--c-border); background: #fff; border-radius: 10px; padding: 0 14px; height: 32px; font-size: 0.88rem; font-weight: 800; color: var(--c-dark); cursor: pointer; min-width: 148px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.15s; font-family: inherit; }
-        .month-label-btn:hover { background: var(--c-bg); border-color: #cbd5e1; }
-        .month-label-btn.open { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent-dark); }
+        /* ── Summary cards (ref b-account-dashboard .kpi-card) ── */
+        .kpi-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .kpi-card { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; padding: 16px 20px; min-width: 0; }
+        .kpi-label { font-size: 0.65rem; font-weight: 800; color: var(--c-slate); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .kpi-icon { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; flex-shrink: 0; }
+        .kpi-val { font-size: 1.6rem; font-weight: 800; color: var(--c-dark); line-height: 1.1; letter-spacing: -0.5px; }
+        .kpi-val small { font-size: 0.8rem; font-weight: 700; color: var(--c-muted); letter-spacing: 0; margin-left: 4px; }
+        .kpi-foot { border-top: 1px solid #f1f5f9; margin-top: 12px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 0.72rem; color: var(--c-muted); font-weight: 600; min-width: 0; }
+        .kpi-foot span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .kpi-foot b { color: var(--c-dark); font-weight: 800; }
+        .kpi-foot .ellip { overflow: hidden; text-overflow: ellipsis; min-width: 0; display: block; }
 
-        /* ── Month Picker Popover ── */
-        .month-picker {
-            display: none; position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-            background: #fff; border: 1px solid var(--c-border); border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12); padding: 14px 16px; width: 240px; z-index: 300;
-        }
-        .month-picker.open { display: block; }
-        .mp-year { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .mp-year-btn { border: none; background: var(--c-bg); border-radius: 7px; width: 28px; height: 28px; cursor: pointer; color: var(--c-slate); font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
-        .mp-year-btn:hover { background: var(--c-border); }
-        .mp-year-label { font-size: 0.88rem; font-weight: 800; color: var(--c-dark); }
-        .mp-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .mp-month { border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 7px 4px; font-size: 0.75rem; font-weight: 700; color: var(--c-slate); cursor: pointer; text-align: center; transition: 0.15s; font-family: inherit; }
-        .mp-month:hover { background: var(--c-bg); border-color: var(--c-border); color: var(--c-dark); }
-        .mp-month.active { background: var(--c-dark); color: var(--c-accent); border-color: var(--c-dark); }
-        .mp-month.today { border-color: var(--c-accent); color: var(--c-accent-dark); }
-        .mp-month.active.today { background: var(--c-dark); color: var(--c-accent); }
+        /* Row 1 — calendar | day list, same height (syncDayHeight). */
+        .row-main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 20px; }
+        .row-main > .section { margin-bottom: 0; }
 
-        .ctrl-sep { width: 1px; height: 22px; background: var(--c-border); }
-        .btn-today { border: 1px solid var(--c-border); background: #fff; border-radius: 8px; padding: 0 14px; height: 32px; font-size: 0.74rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.15s; font-family: inherit; }
-        .btn-today:hover { background: var(--c-bg); border-color: #cbd5e1; }
-
-        /* ── Role toggle row — multi-select (independent on/off per role,
-           unlike List/Assignment's single-select sliding segment), same
-           horizontal-scroll+fade-edge affordance as .role-seg-scroll-outer
-           in b-quest.css for when there isn't room for every role. */
-        .role-toggle-outer { position: relative; flex: 1; min-width: 0; }
-        .role-toggle-scroll { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
-        .role-toggle-scroll::-webkit-scrollbar { display: none; }
-        .role-toggle-outer::before, .role-toggle-outer::after { content: ''; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s; }
-        .role-toggle-outer::before { left: 0; background: linear-gradient(to right, #fff, transparent); }
-        .role-toggle-outer::after { right: 0; background: linear-gradient(to left, #fff, transparent); }
-        .role-toggle-outer.fade-left::before { opacity: 1; }
-        .role-toggle-outer.fade-right::after { opacity: 1; }
-        .role-toggle-btn { flex-shrink: 0; border: 1px solid var(--c-border); background: #fff; border-radius: 20px; padding: 0 14px; height: 32px; font-size: 0.8rem; font-weight: 700; color: var(--c-slate); cursor: pointer; transition: 0.15s; white-space: nowrap; font-family: inherit; }
-        .role-toggle-btn:hover { border-color: #cbd5e1; }
-        .role-toggle-btn.active { border-color: var(--role-color, var(--c-accent)); background: var(--role-bg, var(--c-accent-light)); color: var(--role-color, var(--c-accent-dark)); }
-
-        /* ── Wrapper ── */
-        .dash-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 60px; display: flex; flex-direction: column; gap: 20px; }
-
-        /* ── Section ── */
-        .section { background: #fff; border: 1px solid var(--c-border); border-radius: 20px; overflow: hidden; }
-        .section-header { display: flex; align-items: center; gap: 10px; padding: 15px 24px; border-bottom: 1px solid var(--c-border); }
-        .section-title { font-size: 0.76rem; font-weight: 800; color: var(--c-dark); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 8px; }
-        .section-body { padding: 20px 24px; }
-
-        /* ── Overview ── */
-        .ov-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
-        .ov-card { border: 1px solid var(--c-border); border-radius: 14px; padding: 18px 20px; }
-        .ov-val { font-size: 2rem; font-weight: 900; color: var(--c-dark); line-height: 1; }
-        .ov-label { font-size: 0.68rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 7px; }
-        .ov-card.ov-active { border-color: var(--c-accent); background: var(--c-accent-light); }
-        .ov-card.ov-active .ov-val { color: var(--c-accent-dark); }
-        .ov-card.ov-des { border-color: var(--c-des-border); background: var(--c-des-bg); }
-        .ov-card.ov-des .ov-val { color: var(--c-des); }
-        .ov-card.ov-cre { border-color: var(--c-cre-border); background: var(--c-cre-bg); }
-        .ov-card.ov-cre .ov-val { color: var(--c-cre); }
-
-        /* ── Two-col layout ── */
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .sub-col { border: 1px solid var(--c-border); border-radius: 14px; overflow: hidden; }
-        .sub-col-head { display: flex; align-items: center; gap: 8px; padding: 11px 16px; font-size: 0.73rem; font-weight: 800; border-bottom: 1px solid var(--c-border); }
-        .sub-col-head-des { background: var(--c-des-bg); color: var(--c-des); border-color: var(--c-des-border); }
-        .sub-col-head-cre { background: var(--c-cre-bg); color: var(--c-cre); border-color: var(--c-cre-border); }
-
-        /* ── Work Type Donut ── */
-        .wt-body { display: flex; align-items: center; gap: 16px; padding: 14px 16px; min-height: 160px; }
-        .wt-chart-area { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
-        .wt-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-        .wt-center-val { font-size: 1.5rem; font-weight: 900; color: var(--c-dark); line-height: 1; }
-        .wt-center-lbl { font-size: 0.6rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
-        .wt-legend { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
-        .wt-legend-item { display: flex; align-items: center; gap: 7px; }
-        .cal-day-info { font-size: 0.58rem; font-weight: 700; opacity: 0.82; margin-top: 2px; line-height: 1; }
-        .wt-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-        .wt-legend-name { font-size: 0.78rem; font-weight: 600; color: var(--c-dark); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .wt-legend-count { font-size: 0.78rem; font-weight: 800; color: var(--c-slate); flex-shrink: 0; }
-
-        /* ── Work Breakdown ── */
-        .wb-table-head { display: grid; grid-template-columns: 1fr 56px 70px; gap: 8px; padding: 8px 16px; background: var(--c-bg); font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .wb-table-head span:not(:first-child) { text-align: center; }
-        .wb-row { display: grid; grid-template-columns: 1fr 56px 70px; gap: 8px; align-items: center; padding: 8px 16px; border-top: 1px solid #f8fafc; transition: background 0.15s; }
-        .wb-row:hover { background: #fafbff; }
-        .wb-row.wb-zero { opacity: 0.4; }
-        .wb-name { font-size: 0.82rem; font-weight: 600; color: var(--c-dark); }
-        .wb-num { font-size: 0.82rem; font-weight: 800; text-align: center; }
-        .wb-weight-bar { height: 4px; background: var(--c-bg); border-radius: 4px; margin-top: 3px; overflow: hidden; }
-        .wb-weight-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
-
-        /* ── Person Summary ── */
-        .ps-table-head { display: grid; grid-template-columns: 1fr 52px 52px 60px; gap: 8px; padding: 8px 16px; background: var(--c-bg); font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .ps-table-head span:not(:first-child) { text-align: center; }
-        .ps-row { display: grid; grid-template-columns: 1fr 52px 52px 60px; gap: 8px; align-items: center; padding: 9px 16px; border-top: 1px solid #f8fafc; transition: background 0.15s; }
-        .ps-row:hover { background: #fafbff; }
-        .ps-name { font-size: 0.82rem; font-weight: 700; color: var(--c-dark); }
-        .ps-num { font-size: 0.82rem; font-weight: 800; text-align: center; }
-
-        /* ── Timeline ── */
-        .tl-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; font-size: 0.73rem; font-weight: 800; border-bottom: 1px solid var(--c-border); }
-        .tl-head-des { background: var(--c-des-bg); color: var(--c-des); border-color: var(--c-des-border); }
-        .tl-head-cre { background: var(--c-cre-bg); color: var(--c-cre); border-color: var(--c-cre-border); }
-        .tl-cap-badge { font-size: 0.67rem; font-weight: 700; opacity: 0.75; }
-        .tl-chart-wrap { padding: 16px; height: 200px; }
-
-        /* ── Empty / Skeleton ── */
-        .col-empty { padding: 24px; text-align: center; color: var(--c-muted); font-size: 0.78rem; font-weight: 600; }
-        .skel { background: #f1f5f9; border-radius: 8px; animation: shimmer 1.4s infinite; }
-        @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-        /* ── Calendar Heatmap ── */
-        .cal-grid-wrap { padding: 10px 14px 14px; }
-        .cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 3px; }
-        .cal-dow { font-size: 0.58rem; font-weight: 800; color: var(--c-muted); text-align: center; text-transform: uppercase; letter-spacing: 0.3px; padding: 2px 0; }
-        .cal-week-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 3px; }
-        .cal-day {
-            border-radius: 7px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; cursor: pointer;
-            border: 1.5px solid transparent; transition: 0.15s; position: relative;
-            font-size: 0.65rem; font-weight: 700; color: var(--c-slate);
-            background: var(--c-bg); padding: 6px 2px 7px; gap: 4px;
-        }
+        /* ── Calendar: white cells; each line = one role: a capacity bar
+           coloured by how full that role is (green / amber / red) and the
+           number of tasks it has that day. ── */
+        .cal-dow, .cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+        .cal-dow { margin-bottom: 6px; }
+        .cal-week + .cal-week { margin-top: 6px; }
+        .cal-dow span { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+        .cal-day { border: 1px solid #eef2f7; border-radius: 12px; background: #fff; min-height: 76px; padding: 7px 8px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
         .cal-day:hover { border-color: #cbd5e1; }
-        .cal-day.cal-empty { background: transparent; cursor: default; pointer-events: none; }
-        .cal-day.cal-today { border-color: var(--c-accent) !important; color: var(--c-accent-dark); }
-        .cal-day.cal-selected { border-color: var(--c-dark) !important; box-shadow: 0 0 0 2px var(--c-dark); }
-        .cal-day.cal-selected.cal-today { border-color: var(--c-accent) !important; box-shadow: 0 0 0 2px var(--c-accent); }
-        .cal-day-num { line-height: 1; font-size: 0.75rem; }
+        .cal-day.out { border-style: dashed; background: transparent; cursor: default; pointer-events: none; opacity: 0.35; }
+        .cal-day.off { background: var(--c-bg); }
+        .cal-day.past { opacity: 0.55; }
+        .cal-day.sel { border-color: var(--c-dark); box-shadow: 0 0 0 1px var(--c-dark); opacity: 1; }
+        .cal-num { font-size: 0.72rem; font-weight: 800; color: var(--c-slate); line-height: 1; }
+        .cal-day.today .cal-num { display: inline-flex; align-self: flex-start; background: var(--c-dark); color: var(--c-accent); border-radius: 20px; padding: 3px 8px; margin: -3px 0 -2px -3px; }
+        .cal-off { font-size: 0.64rem; font-weight: 700; color: #cbd5e1; margin-top: auto; }
+        .cal-line { display: flex; align-items: center; gap: 5px; font-size: 0.66rem; font-weight: 800; color: var(--c-slate); min-width: 0; }
+        .cal-line .n { min-width: 12px; text-align: right; }
+        .cal-bar { flex: 1; height: 5px; border-radius: 3px; background: #f1f5f9; overflow: hidden; min-width: 0; }
+        .cal-bar > i { display: block; height: 100%; border-radius: 3px; }
+        .cal-bar > i.over { background: #ef4444 !important; }
+        .cal-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px; font-size: 0.68rem; color: var(--c-muted); font-weight: 600; }
+        .cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .cal-legend i.sw { width: 14px; height: 5px; border-radius: 3px; display: inline-block; }
 
-        /* past days — muted */
-        .cal-day.cal-past { opacity: 0.35; }
-        .cal-day.cal-past:hover { opacity: 0.65; border-color: #cbd5e1; }
+        /* ── Day panel ── */
+        .day-section { display: flex; flex-direction: column; }
+        .day-section .section-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 18px; }
+        .day-sum { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+        .day-sum span { display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: var(--c-bg); color: var(--c-slate); }
+        .day-sum span b { font-weight: 800; color: var(--c-dark); }
+        .day-sum span.over { background: #fef2f2; color: #b91c1c; }
+        .day-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -8px; padding: 0 8px; scrollbar-width: thin; scrollbar-color: #d4dae3 transparent; }
+        .day-group { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.6px; padding: 12px 0 6px; position: sticky; top: 0; background: #fff; z-index: 1; }
+        .task-item { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
+        .task-item:last-child { border-bottom: none; }
+        .task-bar { width: 3px; border-radius: 2px; flex-shrink: 0; }
+        .task-main { flex: 1; min-width: 0; }
+        .task-name { color: var(--c-dark); font-weight: 700; font-size: 0.82rem; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .task-name:hover { color: var(--c-accent-dark); }
+        .task-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .task-title .task-name { flex: 0 1 auto; min-width: 0; }
+        .open-view { color: #cbd5e1; font-size: 0.72rem; text-decoration: none; flex-shrink: 0; }
+        .open-view:hover { color: var(--c-accent-dark); }
+        .task-sub { font-size: 0.7rem; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+        .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; font-size: 0.7rem; color: var(--c-slate); font-weight: 600; }
+        .st-chip { font-size: 0.62rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; white-space: nowrap; }
+        .av { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--c-accent-light); color: var(--c-accent-dark); font-size: 0.5rem; font-weight: 800; overflow: hidden; flex-shrink: 0; }
+        .av img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* badges inside cell */
-        .cal-badges { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
-        .cal-badge {
-            font-size: 0.52rem; font-weight: 800; padding: 1px 5px;
-            border-radius: 4px; line-height: 1.5; letter-spacing: 0.2px;
+        /* ── Daily Capacity — Settings' carousel: 2 cards fill the row,
+           more roles scroll sideways. ── */
+        .cap-carousel { position: relative; }
+        .cap-track { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #d4dae3 transparent; }
+        .cap-card { flex: 0 0 calc(50% - 10px); scroll-snap-align: start; border: 1px solid var(--c-border); border-radius: 14px; overflow: hidden; min-width: 0; }
+        .cap-track.single .cap-card { flex-basis: 100%; }
+        .cap-card-hd { display: flex; align-items: center; gap: 8px; padding: 11px 16px; font-size: 0.75rem; font-weight: 800; border-bottom: 1px solid var(--c-border); }
+        .cap-card-hd .max { margin-left: auto; font-size: 0.64rem; font-weight: 800; opacity: 0.75; }
+        .cap-wrap { position: relative; height: 200px; padding: 10px 12px 6px; }
+
+        /* ── Tasks table (by Opportunity / by Owner) ── */
+        .tbl-search { position: relative; width: 240px; }
+        .tbl-search i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--c-muted); font-size: 0.78rem; pointer-events: none; }
+        .tbl-search input { width: 100%; height: 32px; border: 1px solid var(--c-border); border-radius: 10px; padding: 0 12px 0 30px; font-size: 0.8rem; outline: none; font-family: inherit; background: var(--c-bg); color: var(--c-dark); }
+        .tbl-search input:focus { border-color: var(--c-accent); background: #fff; }
+        .seg { display: flex; align-items: center; gap: 2px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 10px; padding: 2px; }
+        .seg-btn { border: none; background: transparent; height: 28px; padding: 0 12px; border-radius: 8px; font-size: 0.74rem; font-weight: 700; color: #94a3b8; cursor: pointer; white-space: nowrap; font-family: inherit; }
+        .seg-btn:hover { color: var(--c-accent-dark); }
+        .seg-btn.active { background: var(--c-dark); color: var(--c-accent); }
+        .tbl-scroll { overflow-x: auto; }
+        .dtbl { width: 100%; border-collapse: collapse; }
+        .dtbl th { font-size: 0.6rem; font-weight: 800; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 12px 10px; border-bottom: 1px solid var(--c-border); white-space: nowrap; text-align: left; }
+        .dtbl td { padding: 11px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; color: var(--c-slate); white-space: nowrap; vertical-align: middle; }
+        .dtbl .r { text-align: right; } .dtbl .c { text-align: center; }
+        .dtbl .strong { font-weight: 800; color: var(--c-dark); }
+        .dtbl .muted { color: var(--c-muted); font-weight: 500; }
+        .x-row { cursor: pointer; }
+        .x-row:hover td { background: var(--c-bg); }
+        .x-chev { font-size: 0.7rem; color: #cbd5e1; margin-right: 8px; display: inline-block; transition: transform 0.15s; }
+        .x-row.open .x-chev { transform: rotate(90deg); color: var(--c-accent-dark); }
+        .x-row.open td { background: #fdfee8; }
+        .x-sub td { background: #fafbfc; font-size: 0.76rem; padding-top: 8px; padding-bottom: 8px; }
+        .x-sub td:first-child { padding-left: 38px; }
+        .x-sub .task-name { font-size: 0.78rem; max-width: 380px; }
+        .role-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.64rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; border: 1px solid; white-space: nowrap; }
+        .role-counts { display: inline-flex; gap: 12px; }
+        .role-counts span { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; color: var(--c-dark); }
+        .st-bar { display: inline-flex; width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: #f1f5f9; vertical-align: middle; }
+        .st-bar > i { display: block; height: 100%; }
+        .who { display: inline-flex; align-items: center; gap: 7px; }
+
+        .dash-empty { display: flex; align-items: center; justify-content: center; min-height: 90px; color: var(--c-muted); font-size: 0.78rem; text-align: center; }
+
+        @media (max-width: 991.98px) {
+            .dash-ctrl { padding: 8px 16px; }
+            .dash-wrap { padding: 16px 16px 0; }
+            .ctrl-right { margin-left: 0; width: 100%; }
+            .role-seg-wrap { flex: 1 1 100%; max-width: none; }
+            .person-box { flex: 1; width: auto; }
+            .row-main { grid-template-columns: minmax(0, 1fr); }
+            .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+            .day-section { height: 480px !important; }
+            .cap-card { flex-basis: 88%; }
+            .section-header .right { margin-left: 0; width: 100%; }
+            .tbl-search { flex: 1; width: auto; }
         }
-        .cal-badge-task { background: rgba(220,38,38,0.15); color: #b91c1c; font-weight: 900; }
-        .cal-badge-ongoing { background: rgba(0,0,0,0.06); color: inherit; opacity: 0.75; }
-        .cal-badge-over { background: #dc2626; color: #fff !important; }
-
-        /* heatmap intensity — designer */
-        .cal-day.heat-des-1 { background: #dbeafe; color: #1d4ed8; }
-        .cal-day.heat-des-2 { background: #bfdbfe; color: #1d4ed8; }
-        .cal-day.heat-des-3 { background: #93c5fd; color: #1e40af; }
-        .cal-day.heat-des-4 { background: #60a5fa; color: #fff; }
-        .cal-day.heat-des-5 { background: #3b82f6; color: #fff; }
-        .cal-day.heat-des-over { background: #fee2e2; color: #991b1b; border-color: #ef4444 !important; }
-
-        /* heatmap intensity — creative */
-        .cal-day.heat-cre-1 { background: #ede9fe; color: #6d28d9; }
-        .cal-day.heat-cre-2 { background: #ddd6fe; color: #6d28d9; }
-        .cal-day.heat-cre-3 { background: #c4b5fd; color: #5b21b6; }
-        .cal-day.heat-cre-4 { background: #a78bfa; color: #fff; }
-        .cal-day.heat-cre-5 { background: #8b5cf6; color: #fff; }
-        .cal-day.heat-cre-over { background: #fee2e2; color: #991b1b; border-color: #ef4444 !important; }
-
-        /* ── Day Detail Modal ── */
-        #day-modal-backdrop {
-            position: fixed; inset: 0; background: rgba(15,23,42,0.45);
-            backdrop-filter: blur(2px); z-index: 900;
-            animation: fadeIn 0.18s ease;
-        }
-        #day-modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 901; background: #fff; border-radius: 20px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.18); width: 92%; max-width: 960px;
-            max-height: 82vh; display: flex; flex-direction: column;
-            animation: slideUp 0.2s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, -46%) } to { opacity: 1; transform: translate(-50%, -50%) } }
-
-        .dm-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 16px 22px; border-bottom: 1px solid var(--c-border); flex-shrink: 0;
-        }
-        .dm-title { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 800; color: var(--c-dark); }
-        .dm-title i { color: var(--c-accent); font-size: 1rem; }
-        .dm-close {
-            border: none; background: var(--c-bg); border-radius: 8px;
-            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; color: var(--c-slate); font-size: 0.8rem; transition: 0.15s;
-        }
-        .dm-close:hover { background: #f1f5f9; color: var(--c-dark); }
-        .dm-body {
-            display: grid; grid-template-columns: 1fr 1fr; overflow-y: auto; flex: 1;
-        }
-        .dm-col { padding: 18px 20px; }
-        .dm-col + .dm-col { border-left: 1px solid var(--c-border); }
-
-        .day-col-head { font-size: 0.67rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-        .day-col-head-des { color: var(--c-des); }
-        .day-col-head-cre { color: var(--c-cre); }
-        .day-task-card {
-            padding: 11px 14px; border-radius: 12px;
-            border: 1px solid var(--c-border); margin-bottom: 8px; background: #fff;
-            transition: border-color 0.15s; display: flex; flex-direction: column; gap: 6px;
-        }
-        .day-task-card:hover { border-color: #cbd5e1; background: var(--c-bg); }
-
-        /* Row 1: Task name + Status */
-        .day-task-row1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-        .day-task-name { font-size: 0.84rem; font-weight: 700; color: var(--c-dark); line-height: 1.3; flex: 1; }
-        .day-task-status { font-size: 0.63rem; font-weight: 800; padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; letter-spacing: 0.2px; }
-        .status-done { background: #dcfce7; color: #15803d; }
-        .status-progress { background: var(--c-accent-light); color: var(--c-accent-dark); }
-        .status-pending { background: #f1f5f9; color: var(--c-slate); }
-
-        /* Row 2: Account | Opp */
-        .day-task-row2 { display: flex; align-items: center; gap: 5px; }
-        .day-task-account { font-size: 0.72rem; font-weight: 600; color: var(--c-slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-        .day-task-opp { font-size: 0.72rem; color: var(--c-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-        .day-task-dot { font-size: 0.55rem; color: #cbd5e1; flex-shrink: 0; }
-
-        /* Row 3: Work + Weight | Owner | Deadline */
-        .day-task-row3 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #f1f5f9; }
-        .day-task-w { font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
-        .day-task-w-des { background: var(--c-des-bg); color: var(--c-des); }
-        .day-task-w-cre { background: var(--c-cre-bg); color: var(--c-cre); }
-        .day-task-meta { font-size: 0.68rem; font-weight: 600; color: var(--c-muted); display: flex; align-items: center; gap: 3px; }
-        .day-task-meta i { font-size: 0.6rem; opacity: 0.6; }
-        .day-task-spacer { flex: 1; }
-
-        .day-empty { color: var(--c-muted); font-size: 0.78rem; font-weight: 600; padding: 8px 0; }
-
-        @media (max-width: 600px) {
-            .dm-body { grid-template-columns: 1fr; }
-            .dm-col + .dm-col { border-left: none; border-top: 1px solid var(--c-border); }
+        @media (max-width: 640px) {
+            /* Three stacked filter rows would eat a third of a phone screen
+               if they stayed pinned — scroll away with the page instead. */
+            .dash-ctrl { position: static; }
+            .kpi-card { padding: 14px; }
+            .kpi-val { font-size: 1.3rem; }
+            .kpi-foot { flex-direction: column; gap: 4px; }
+            .kpi-foot span { white-space: normal; }
+            .day-section .section-header .right { width: auto; margin-left: auto; }
+            .cal-dow, .cal-week { gap: 3px; }
+            .cal-week + .cal-week { margin-top: 3px; }
+            .cal-day { min-height: 52px; padding: 5px; border-radius: 9px; }
+            .cal-line .n { display: none; }
         }
     </style>
 </head>
 <body>
 
-<!-- Control Bar -->
-<div class="ctrl-bar">
-    <div class="ctrl-inner">
-        <div class="month-nav">
-            <button class="month-nav-btn" id="btn-prev"><i class="bi bi-chevron-left"></i></button>
-
-            <button class="month-label-btn" id="month-label-btn">
-                <i class="bi bi-calendar3" style="font-size:0.8rem"></i>
-                <span id="month-label-text">—</span>
-                <i class="bi bi-chevron-down" style="font-size:0.65rem;opacity:0.6"></i>
-            </button>
-
-            <!-- Month Picker Popover -->
-            <div class="month-picker" id="month-picker">
-                <div class="mp-year">
-                    <button class="mp-year-btn" id="mp-prev-year"><i class="bi bi-chevron-left"></i></button>
-                    <span class="mp-year-label" id="mp-year-label">2026</span>
-                    <button class="mp-year-btn" id="mp-next-year"><i class="bi bi-chevron-right"></i></button>
-                </div>
-                <div class="mp-months" id="mp-months"></div>
-            </div>
-
-            <button class="month-nav-btn" id="btn-next"><i class="bi bi-chevron-right"></i></button>
+<div class="dash-ctrl">
+    <div class="dash-ctrl-inner">
+        <div class="month-box">
+            <span class="flt-select-tag">Month</span>
+            <button class="month-nav" data-month-step="-1" title="Previous month"><i class="bi bi-chevron-left"></i></button>
+            <button class="month-label" id="monthLabel" data-month-open></button>
+            <button class="month-nav" data-month-step="1" title="Next month"><i class="bi bi-chevron-right"></i></button>
+            <div class="month-pop" id="monthPop"></div>
         </div>
-        <div class="ctrl-sep"></div>
-        <button class="btn-today" id="btn-today">This Month</button>
-        <div class="ctrl-sep"></div>
-        <div class="role-toggle-outer" id="roleToggleOuter">
-            <div class="role-toggle-scroll" id="roleToggleScroll"></div>
+        <div class="ctrl-right">
+            <div class="role-seg-wrap">
+                <span class="role-seg-label">Role</span>
+                <div class="role-seg-scroll-outer" id="roleSegOuter">
+                    <div class="role-seg-scroll" id="roleSegWrap"><div class="role-seg-slider" id="roleSegSlider"></div></div>
+                </div>
+            </div>
+            <div class="flt-select-box person-box" id="personBox">
+                <span class="flt-select-tag">Person</span>
+                <span class="flt-select-input" id="personLabel">Everyone</span>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Dashboard Content -->
-<div class="dash-wrapper">
+<div class="dash-wrap">
+    <div class="page-header">
+        <h1><i class="bi bi-bar-chart-fill me-2" style="color:var(--c-accent)"></i>B-QUEST Dashboard</h1>
+        <span class="upd" id="updatedAt"></span>
+    </div>
 
-    <!-- 1. Overview -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="row-main">
+        <div class="section" id="calSection">
+            <div class="section-header">
+                <div class="section-title"><i class="bi bi-calendar3"></i> <span id="calTitle">Calendar</span></div>
+            </div>
+            <div class="section-body">
+                <div id="calendar"><div class="dash-empty">Loading…</div></div>
+                <div class="cal-legend" id="calLegend"></div>
+            </div>
+        </div>
+
+        <div class="section day-section" id="daySection">
+            <div class="section-header">
+                <div class="section-title"><i class="bi bi-list-check"></i> <span id="dayTitle"></span></div>
+                <div class="right">
+                    <button class="icon-btn" data-day-step="-1" title="Previous day"><i class="bi bi-chevron-left"></i></button>
+                    <button class="icon-btn" data-day-step="1" title="Next day"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="section-body">
+                <div class="day-sum" id="daySum"></div>
+                <div class="day-list" id="dayList"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="section">
         <div class="section-header">
-            <div class="section-title"><i class="bi bi-grid-1x2-fill"></i> Overview</div>
+            <div class="section-title"><i class="bi bi-bar-chart-line"></i> Daily Capacity <span class="count-badge">points / day</span></div>
         </div>
         <div class="section-body">
-            <div class="ov-grid" id="ov-grid">
-                <div class="ov-card" style="grid-column:1/6"><div class="skel" style="height:70px"></div></div>
-            </div>
+            <div class="cap-carousel"><div class="cap-track" id="capTrack"></div></div>
         </div>
     </div>
 
-    <!-- 2. Calendar Heatmap -->
     <div class="section">
         <div class="section-header">
-            <div class="section-title"><i class="bi bi-calendar3-week-fill"></i> Calendar — Deadline Load</div>
-        </div>
-        <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div class="cal-grid-wrap" id="cal-des"></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div class="cal-grid-wrap" id="cal-cre"></div>
+            <div class="section-title"><i class="bi bi-kanban"></i> Tasks <span class="count-badge" id="tblCount">0</span></div>
+            <div class="tbl-search"><i class="bi bi-search"></i><input id="tblSearch" placeholder="Search..."></div>
+            <div class="right">
+                <div class="seg" id="tblSeg">
+                    <button class="seg-btn active" data-tbl="opp">Opportunity</button>
+                    <button class="seg-btn" data-tbl="owner">Owner</button>
                 </div>
             </div>
         </div>
+        <div class="section-body"><div class="tbl-scroll" id="tbl"></div></div>
     </div>
-
-    <!-- 3. Daily Capacity -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-bar-chart-fill"></i> Daily Capacity</div>
-        </div>
-        <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="tl-head tl-head-des">
-                        <span><i class="bi bi-brush-fill me-1"></i> Designer</span>
-                        <span class="tl-cap-badge" id="cap-badge-des">—</span>
-                    </div>
-                    <div class="tl-chart-wrap"><canvas id="chart-des"></canvas></div>
-                </div>
-                <div class="sub-col">
-                    <div class="tl-head tl-head-cre">
-                        <span><i class="bi bi-rocket-fill me-1"></i> Creative</span>
-                        <span class="tl-cap-badge" id="cap-badge-cre">—</span>
-                    </div>
-                    <div class="tl-chart-wrap"><canvas id="chart-cre"></canvas></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. Work Types (donut) -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-pie-chart-fill"></i> Work Types</div>
-        </div>
-        <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div id="wt-des"><div class="col-empty">Loading...</div></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div id="wt-cre"><div class="col-empty">Loading...</div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. Work Breakdown -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-table"></i> Work Breakdown</div>
-        </div>
-        <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div class="wb-table-head"><span>Work</span><span>Tasks</span><span>% Done</span></div>
-                    <div id="wb-des"><div class="col-empty">Loading...</div></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div class="wb-table-head"><span>Work</span><span>Tasks</span><span>% Done</span></div>
-                    <div id="wb-cre"><div class="col-empty">Loading...</div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 6. Person Summary -->
-    <div class="section">
-        <div class="section-header">
-            <div class="section-title"><i class="bi bi-people-fill"></i> Person Summary</div>
-        </div>
-        <div class="section-body">
-            <div class="two-col">
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                    <div class="ps-table-head"><span>Member</span><span>Tasks</span><span>Done</span><span>Weight</span></div>
-                    <div id="ps-des"><div class="col-empty">Loading...</div></div>
-                </div>
-                <div class="sub-col">
-                    <div class="sub-col-head sub-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                    <div class="ps-table-head"><span>Member</span><span>Tasks</span><span>Done</span><span>Weight</span></div>
-                    <div id="ps-cre"><div class="col-empty">Loading...</div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Day Detail Modal -->
-    <div id="day-modal-backdrop" style="display:none" onclick="closeDayModal()"></div>
-    <div id="day-modal" style="display:none">
-        <div class="dm-header">
-            <div class="dm-title">
-                <i class="bi bi-calendar-day"></i>
-                <span id="dm-date">—</span>
-            </div>
-            <button class="dm-close" onclick="closeDayModal()"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <div class="dm-body">
-            <div class="dm-col">
-                <div class="day-col-head day-col-head-des"><i class="bi bi-brush-fill"></i> Designer</div>
-                <div id="day-tasks-des"></div>
-            </div>
-            <div class="dm-col">
-                <div class="day-col-head day-col-head-cre"><i class="bi bi-rocket-fill"></i> Creative</div>
-                <div id="day-tasks-cre"></div>
-            </div>
-        </div>
-    </div>
-
 </div>
 
 <script>
+    // ── State ──
+    let month = null, range = null;
+    let roles = [], roleById = {}, statusById = {}, profileMap = {};
+    let workdayWeight = null, holidays = [];
+    let roleRows = [];        // task-role rows (+quest), deadline in month (+31-day spill-in buffer)
+    let createdQuests = [];   // quests created inside the month
+    let overdueRows = [];     // not-done rows due before today (last 90 days)
+    let workList = [];        // b_quest_work, for the Edit modal's Work dropdown
+    let selRole = '';         // '' = All
+    let person = '';          // '' = everyone, else an assignee codename
+    let selDate = null;
+    let tblMode = 'opp';
+    const openRows = new Set();
+    let capCharts = [];
+    let popYear = null;
+
+    // ── Dates ('YYYY-MM-DD', local) ──
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const DONUT_PALETTE = [
-        '#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444',
-        '#8b5cf6','#ec4899','#84cc16','#f97316','#64748b'
-    ];
+    const pad = n => String(n).padStart(2, '0');
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+    const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
+    const todayStr = () => ymd(new Date());
+    const mondayOf = s => { const d = parse(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d); };
+    const daysBetween = (a, b) => { const out = []; for (let s = a; s <= b; s = addDays(s, 1)) out.push(s); return out; };
+    const fmtShort = s => parse(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const fmtLong = s => parse(s).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const r1 = n => Math.round(n * 10) / 10;
 
-    let curYear, curMonth;
-    let chartDes = null, chartCre = null;
-    let chartWtDes = null, chartWtCre = null;
-    let capDes = 0, capCre = 0;
-    let pickerYear;
-    let workList = [];
-    let roleList = [];
-    // Daily Capacity % + company holidays — same config b-quest-modal.js's
-    // capacity check already reads, loaded here too so the Timeline/
-    // Calendar Heatmap stop showing full load on a 0%-capacity day (a
-    // weekend set to 0%, or a full-day holiday when Include Holidays is off).
-    let dashWorkdayWeight = null;
-    let dashHolidays = [];
-    // Empty = no restriction (show every role) — same convention as List's
-    // multi-selects (getValues() returning [] means "no filter").
-    let selectedRoleIds = new Set();
+    // ── Rules shared with the old dashboard / modal: weight spread over
+    // `day` days ending at the deadline, each day scaled by bqDayPct
+    // (weekday Daily Capacity %, half/full holiday), vs role max_capacity. ──
+    const coveredDays = r => Array.from({ length: Math.max(1, parseInt(r.day, 10) || 1) }, (_, i) => addDays(r.deadline, -i));
+    const roleCap = id => Number(roleById[id]?.max_capacity) || 0;
+    const isDone = r => (statusById[r.status_id]?.name || r.status || '').toLowerCase() === 'done';
+    const oppKey = q => `${q.opportunity_name || '(No opportunity)'}||${q.account_name || ''}`;
+    const shownRoles = () => selRole ? roles.filter(r => r.id === selRole) : roles;
+    const loadOf = (list, ds) => list.reduce((s, r) => s + (Number(r.weight) || 0) * bqDayPct(ds, workdayWeight, holidays) / 100, 0);
 
-    // ── Month helpers ──
-    function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function monthRange() {
-        const start = `${curYear}-${pad(curMonth + 1)}-01`;
-        const end   = `${curYear}-${pad(curMonth + 1)}-${pad(daysInMonth(curYear, curMonth))}`;
-        return { start, end };
+    // Everything reads through this, so Role / Person apply page-wide.
+    const rows = ({ ignorePerson = false } = {}) => roleRows.filter(r => (!selRole || r.role_id === selRole) && (ignorePerson || !person || r.assign === person));
+    const inMonth = r => r.deadline >= range.start && r.deadline <= range.end;
+
+    // ── Data ──
+    async function fetchAll(build) {
+        const out = [];
+        for (let from = 0; ; from += 1000) {
+            const { data, error } = await build().range(from, from + 999);
+            if (error) throw error;
+            out.push(...(data || []));
+            if (!data || data.length < 1000) break;
+        }
+        return out;
     }
 
-    function initMonth() {
-        const now = new Date();
-        curYear  = now.getFullYear();
-        curMonth = now.getMonth();
-        updateLabel();
-    }
-    function updateLabel() {
-        document.getElementById('month-label-text').textContent =
-            new Date(curYear, curMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    }
-
-    // ── Month Picker ──
-    function openPicker() {
-        pickerYear = curYear;
-        renderPickerMonths();
-        document.getElementById('mp-year-label').textContent = pickerYear;
-        document.getElementById('month-picker').classList.add('open');
-        document.getElementById('month-label-btn').classList.add('open');
-    }
-    function closePicker() {
-        document.getElementById('month-picker').classList.remove('open');
-        document.getElementById('month-label-btn').classList.remove('open');
-    }
-    function renderPickerMonths() {
-        const now = new Date();
-        document.getElementById('mp-year-label').textContent = pickerYear;
-        document.getElementById('mp-months').innerHTML = MONTHS.map((name, i) => {
-            const isActive  = pickerYear === curYear && i === curMonth;
-            const isToday   = pickerYear === now.getFullYear() && i === now.getMonth();
-            const cls = [isActive ? 'active' : '', isToday ? 'today' : ''].join(' ');
-            return `<button class="mp-month ${cls}" data-m="${i}">${name}</button>`;
-        }).join('');
-        document.querySelectorAll('.mp-month').forEach(btn => {
-            btn.onclick = () => {
-                curYear  = pickerYear;
-                curMonth = parseInt(btn.dataset.m);
-                updateLabel();
-                closePicker();
-                loadData();
-            };
-        });
-    }
-
-    document.getElementById('month-label-btn').onclick = (e) => {
-        e.stopPropagation();
-        document.getElementById('month-picker').classList.contains('open') ? closePicker() : openPicker();
-    };
-    document.getElementById('mp-prev-year').onclick = (e) => { e.stopPropagation(); pickerYear--; renderPickerMonths(); };
-    document.getElementById('mp-next-year').onclick = (e) => { e.stopPropagation(); pickerYear++; renderPickerMonths(); };
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.month-nav')) closePicker();
-    });
-
-    document.getElementById('btn-prev').onclick = () => {
-        if (--curMonth < 0) { curMonth = 11; curYear--; }
-        updateLabel(); loadData();
-    };
-    document.getElementById('btn-next').onclick = () => {
-        if (++curMonth > 11) { curMonth = 0; curYear++; }
-        updateLabel(); loadData();
-    };
-    document.getElementById('btn-today').onclick = () => {
-        const now = new Date(); curYear = now.getFullYear(); curMonth = now.getMonth();
-        updateLabel(); loadData();
-    };
-
-    // ── Load ──
-    // Reads live per-role rows from b-quest-task-role (the schema
-    // b-quest-modal.js has written to since the task-role cutover) and
-    // synthesizes the legacy flat designer_*/creative_* properties every
-    // render*() function below still expects, keyed by matching each
-    // task-role row's denormalized `role` name. This is a data-layer-only
-    // fix — render*() functions are unchanged and still only look at
-    // Designer/Creative, so a 3rd+ role (e.g. IT) is fetched but not yet
-    // shown; that's the next phase, not this one.
-    function synthesizeLegacyFields(task) {
-        const roles = task.roles || [];
-        // A role's data only counts if it's actually selected in the
-        // toggle filter (or nothing is selected, meaning "show every
-        // role") — otherwise a task that qualified because its *other*
-        // role's deadline is in range would still leak this role's
-        // numbers into Designer/Creative sections even when toggled off.
-        const roleAllowed = r => selectedRoleIds.size === 0 || selectedRoleIds.has(r.role_id);
-        const des = roles.find(r => r.role === 'Designer' && roleAllowed(r));
-        const cre = roles.find(r => r.role === 'Creative' && roleAllowed(r));
-        return {
-            ...task,
-            designer_deadline: des?.deadline || null,
-            designer_assign: des?.assign || null,
-            designer_weight: des?.weight || null,
-            designer_type: des?.type || null,
-            designer_status: des?.status || null,
-            designer_day: des?.day || null,
-            creative_deadline: cre?.deadline || null,
-            creative_assign: cre?.assign || null,
-            creative_weight: cre?.weight || null,
-            creative_day: cre?.day || null,
-            creative_type: cre?.type || null,
-            creative_status: cre?.status || null,
-        };
-    }
-
-    // ── Role toggle filter ──
-    // Multi-select: each button is independently on/off, unlike List's
-    // single-select role segment. Renders one button per active role from
-    // b-quest-role, so adding/removing a role there adds/removes a button
-    // here automatically — no hardcoded role names.
-    async function loadRoleList() {
-        const { data } = await supabaseClient.from('b_quest_role').select('id, name, color, active').order('name');
-        roleList = (data || []).filter(r => r.active !== false);
-        renderRoleToggles();
-    }
-
-    function renderRoleToggles() {
-        const scroll = document.getElementById('roleToggleScroll');
-        if (!scroll) return;
-        const allBtn = `<button class="role-toggle-btn${selectedRoleIds.size === 0 ? ' active' : ''}" data-role="">All</button>`;
-        const roleBtns = roleList.map(r => {
-            const active = selectedRoleIds.has(r.id);
-            const style = active ? ` style="--role-color:${esc(r.color || '')};--role-bg:${esc(hexToRgba(r.color, 0.15))}"` : '';
-            return `<button class="role-toggle-btn${active ? ' active' : ''}" data-role="${esc(r.id)}"${style}>${esc(r.name)}</button>`;
-        }).join('');
-        scroll.innerHTML = allBtn + roleBtns;
-        updateRoleToggleFade();
-    }
-
-    function updateRoleToggleFade() {
-        const scroll = document.getElementById('roleToggleScroll');
-        const outer = document.getElementById('roleToggleOuter');
-        if (!scroll || !outer) return;
-        outer.classList.toggle('fade-left', scroll.scrollLeft > 2);
-        outer.classList.toggle('fade-right', scroll.scrollLeft + scroll.clientWidth < scroll.scrollWidth - 2);
-    }
-
-    document.getElementById('roleToggleScroll').addEventListener('click', e => {
-        const btn = e.target.closest('.role-toggle-btn');
-        if (!btn) return;
-        const roleId = btn.dataset.role;
-        if (!roleId) selectedRoleIds.clear();
-        else if (selectedRoleIds.has(roleId)) selectedRoleIds.delete(roleId);
-        else selectedRoleIds.add(roleId);
-        renderRoleToggles();
-        loadData();
-    });
-    document.getElementById('roleToggleScroll').addEventListener('scroll', updateRoleToggleFade);
-
-    // Cached once per page load (same guard style as b-quest-modal.js's
-    // loadWorkdayWeight) — holidays are only fetched when Include Holidays
-    // is actually off, same as the modal.
-    async function loadDashboardCapacityConfig() {
-        if (dashWorkdayWeight) return;
-        const [{ data: wd }, { data: mergeCfg }] = await Promise.all([
+    async function loadMaster() {
+        const [{ data: r }, { data: s }, { data: p }, { data: wd }, { data: merge }, { data: w }] = await Promise.all([
+            supabaseClient.from('b_quest_role').select('id, name, color, icon, active, sort_order, max_capacity').order('sort_order'),
+            supabaseClient.from('b_quest_status').select('id, name, color'),
+            supabaseClient.from('profiles').select('codename, nick_name, avatar_url'),
             supabaseClient.from('b_quest_setting').select('value').eq('rule', 'workday_weight').maybeSingle(),
             supabaseClient.from('b_quest_setting').select('value').eq('rule', 'merge_company_holidays').maybeSingle(),
+            supabaseClient.from('b_quest_work').select('work, day, weight, max_per_day, role_id').order('work'),
         ]);
-        dashWorkdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(wd?.value || {}) };
-        if (mergeCfg?.value === true) {
-            const { data: holidays } = await supabaseClient.from('holiday').select('date_from, date_to, day_type');
-            dashHolidays = holidays || [];
+        workList = w || [];
+        roles = (r || []).filter(x => x.active !== false);
+        roleById = Object.fromEntries(roles.map(x => [x.id, x]));
+        statusById = Object.fromEntries((s || []).map(x => [x.id, x]));
+        profileMap = Object.fromEntries((p || []).map(x => [x.codename, x]));
+        workdayWeight = { mon: 100, tue: 100, wed: 100, thu: 100, fri: 100, sat: 100, sun: 100, ...(wd?.value || {}) };
+        if (merge?.value === true) {
+            const { data: h } = await supabaseClient.from('holiday').select('date_from, date_to, day_type');
+            holidays = h || [];
         }
     }
 
-    async function loadData() {
-        calSelectedDate = null;
-        await loadDashboardCapacityConfig();
-
-        const { start, end } = monthRange();
-
-        let roleQuery = supabaseClient
-            .from('b_quest_task_role')
-            .select('quest_id')
-            .gte('deadline', start).lte('deadline', end);
-        if (selectedRoleIds.size) roleQuery = roleQuery.in('role_id', [...selectedRoleIds]);
-        const { data: roleRows } = await roleQuery;
-        const questIds = [...new Set((roleRows || []).map(r => r.quest_id))];
-
-        // Capacity now lives on b-quest-role.max_capacity (same source
-        // b-quest-modal.js's effectiveMaxCap() reads) — b_quest_capacity
-        // was the old standalone table this used to read, now dead.
-        const [tasksRes, roleRes, workRes] = await Promise.all([
-            questIds.length
-                ? supabaseClient.from('b_quest_list').select('*, roles:"b_quest_task_role"(*)').in('id', questIds)
-                : Promise.resolve({ data: [] }),
-            supabaseClient.from('b_quest_role').select('name, max_capacity'),
-            supabaseClient.from('b_quest_work').select('*').order('work')
+    async function loadMonthData() {
+        const t = todayStr();
+        const [rr, created, over] = await Promise.all([
+            fetchAll(() => supabaseClient.from('b_quest_task_role')
+                .select('id, quest_id, role_id, status_id, status, work, deadline, weight, day, assign, quest:b_quest_list(id, task_name, account_name, opportunity_name, owner)')
+                .gte('deadline', range.start).lte('deadline', addDays(range.end, 31))),
+            fetchAll(() => supabaseClient.from('b_quest_list')
+                .select('id, task_name, account_name, opportunity_name, owner, create_date, roles:b_quest_task_role(role_id, assign)')
+                .gte('create_date', range.start + 'T00:00:00+07:00').lte('create_date', range.end + 'T23:59:59+07:00')),
+            fetchAll(() => supabaseClient.from('b_quest_task_role')
+                .select('id, quest_id, role_id, status_id, status, deadline, assign, quest:b_quest_list(id, task_name)')
+                .gte('deadline', addDays(t, -90)).lt('deadline', t)),
         ]);
-
-        const tasks = (tasksRes.data || []).map(synthesizeLegacyFields);
-        const roleCaps = roleRes.data || [];
-        workList    = workRes.data  || [];
-        capDes = roleCaps.find(r => r.name === 'Designer')?.max_capacity || 0;
-        capCre = roleCaps.find(r => r.name === 'Creative')?.max_capacity || 0;
-
-        renderOverview(tasks);
-        renderWorkTypes(tasks);
-        renderWorkBreakdown(tasks);
-        renderPersons(tasks);
-        renderTimeline(tasks);
-        renderCalendar(tasks);
+        overdueRows = over.filter(r => r.quest && roleById[r.role_id] && !isDone(r));
+        roleRows = rr.filter(r => r.quest && roleById[r.role_id]);
+        createdQuests = created.map(q => ({ ...q, _day: ymd(new Date(q.create_date)) }));
     }
 
-    // ── Section 1: Overview ──
-    function renderOverview(tasks) {
-        const { start, end } = monthRange();
+    // ── Helpers ──
+    function avatar(code) {
+        const p = profileMap[code];
+        const inner = p?.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : esc(getInitials((p?.nick_name || code || '').replace(/\s*\(.*$/, '')));
+        return `<span class="av">${inner}</span>`;
+    }
+    function statusChip(r) {
+        const s = statusById[r.status_id], c = s?.color || '#94a3b8';
+        return `<span class="st-chip" style="background:${hexToRgba(c, 0.16)};color:${pickTintTextColor(c, 0.16)}">${esc(s?.name || r.status || '-')}</span>`;
+    }
+    function roleBadge(id) {
+        const ro = roleById[id]; if (!ro) return '';
+        return `<span class="role-badge" style="color:${ro.color};border-color:${hexToRgba(ro.color, 0.4)};background:${hexToRgba(ro.color, 0.08)}">${esc(ro.name)}</span>`;
+    }
+    // Clicking a task opens the List page's Edit modal right here when the
+    // viewer may edit that role row (same canBquestActOnRole rule the View
+    // page uses), otherwise its View page in a new tab. The ↗ icon always
+    // opens View.
+    const viewHref = id => `b-quest-view?id=${encodeURIComponent(id)}`;
+    function canEditRow(roleId, assign, owner) {
+        const ro = roleById[roleId];
+        return !!ro && typeof canBquestActOnRole === 'function' && canBquestActOnRole(ro.name, assign, 'edit', owner === (getBxUser()?.codename || ''));
+    }
+    function taskLink(id, name, editable) {
+        return `<span class="task-title"><a class="task-name" href="${viewHref(id)}" target="_blank" rel="noopener"${editable ? ` data-edit="${esc(id)}" title="Edit"` : ''}>${esc(name || 'Untitled')}</a>`
+            + `<a class="open-view" href="${viewHref(id)}" target="_blank" rel="noopener" title="Open view"><i class="bi bi-box-arrow-up-right"></i></a></span>`;
+    }
+    const rowLink = r => taskLink(r.quest.id, r.quest.task_name, canEditRow(r.role_id, r.assign, r.quest.owner));
 
-        const dTasks = tasks.filter(t => t.designer_deadline >= start && t.designer_deadline <= end && t.designer_assign);
-        const cTasks = tasks.filter(t => t.creative_deadline >= start && t.creative_deadline <= end && t.creative_assign);
-        const allIds = new Set([...dTasks, ...cTasks].map(t => t.id));
+    // ── Top bar ──
+    const roleSeg = createRoleSegControl({
+        wrapId: 'roleSegWrap', outerId: 'roleSegOuter', sliderId: 'roleSegSlider',
+        getButtons: () => [{ label: 'All', value: '', icon: '', color: '' }, ...roles.map(r => ({ label: r.name, value: r.id, icon: r.icon || 'bi-person-workspace', color: r.color }))],
+        getActiveValue: () => selRole,
+        onSelect: value => { selRole = value; roleSeg.setActive(value); try { localStorage.setItem('bq_dash_role', value); } catch {} renderAll(); },
+    });
+    document.getElementById('roleSegWrap').addEventListener('scroll', () => roleSeg.updateFade());
 
-        const activeUniq = new Set(tasks.filter(t =>
-            (dTasks.find(d => d.id === t.id) && t.designer_status === 'On Progress') ||
-            (cTasks.find(c => c.id === t.id) && t.creative_status === 'On Progress')
-        ).map(t => t.id)).size;
+    document.getElementById('personBox').addEventListener('click', e => {
+        const me = getBxUser()?.codename || '';
+        const people = [...new Set(rows({ ignorePerson: true }).filter(inMonth).map(r => r.assign).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        if (me && !people.includes(me)) people.unshift(me);
+        openSelectPicker(e.currentTarget, {
+            width: 240,
+            getOptions: () => [{ value: '', label: 'Everyone' }, ...people.map(p => ({ value: p, label: p === me ? `${p} (me)` : p }))],
+            getValue: () => person,
+            onSelect: v => { person = v; renderAll(); },
+        });
+    });
 
-        const done = [...allIds].filter(id => {
-            const t = tasks.find(r => r.id === id);
-            const dDone = !dTasks.find(d => d.id === id) || t.designer_status === 'Done';
-            const cDone = !cTasks.find(c => c.id === id) || t.creative_status === 'Done';
-            return dDone && cDone;
-        }).length;
-
-        document.getElementById('ov-grid').innerHTML = `
-            <div class="ov-card">
-                <div class="ov-val">${allIds.size}</div>
-                <div class="ov-label">Total Tasks</div>
-            </div>
-            <div class="ov-card ov-active">
-                <div class="ov-val">${activeUniq}</div>
-                <div class="ov-label">On Progress</div>
-            </div>
-            <div class="ov-card">
-                <div class="ov-val">${done}</div>
-                <div class="ov-label">Done</div>
-            </div>
-            <div class="ov-card ov-des">
-                <div class="ov-val">${new Set(dTasks.map(t => t.designer_assign)).size}</div>
-                <div class="ov-label">Designers Working</div>
-            </div>
-            <div class="ov-card ov-cre">
-                <div class="ov-val">${new Set(cTasks.map(t => t.creative_assign)).size}</div>
-                <div class="ov-label">Creatives Working</div>
-            </div>
-        `;
+    function renderTopBar() {
+        document.getElementById('monthLabel').textContent = `${MONTHS[month.m]} ${month.y}`;
+        document.getElementById('personLabel').textContent = person || 'Everyone';
+        document.getElementById('personBox').classList.toggle('active-filter', !!person);
+    }
+    function renderMonthPop() {
+        document.getElementById('monthPop').innerHTML = `<div class="month-pop-hd"><button class="icon-btn" data-pop-year="-1"><i class="bi bi-chevron-left"></i></button>${popYear}<button class="icon-btn" data-pop-year="1"><i class="bi bi-chevron-right"></i></button></div>
+            <div class="month-pop-grid">${MONTHS.map((n, i) => `<button class="${popYear === month.y && i === month.m ? 'active' : ''}" data-pick-month="${i}">${n}</button>`).join('')}</div>`;
     }
 
-    // ── Section 2: Work Types (Donut) ──
-    function renderWorkTypes(tasks) {
-        const { start, end } = monthRange();
-
-        function countBy(list, typeField, deadlineField) {
-            const map = {};
-            list.filter(t => t[deadlineField] >= start && t[deadlineField] <= end && t[typeField])
-                .forEach(t => { map[t[typeField]] = (map[t[typeField]] || 0) + 1; });
-            return Object.entries(map).sort((a, b) => b[1] - a[1]);
-        }
-
-        const desEntries = countBy(tasks.filter(t => t.designer_deadline), 'designer_type', 'designer_deadline');
-        const creEntries = countBy(tasks.filter(t => t.creative_deadline), 'creative_type', 'creative_deadline');
-
-        function renderDonut(entries, containerId, chartKey) {
-            const el = document.getElementById(containerId);
-            if (!entries.length) {
-                el.innerHTML = `<div class="col-empty">No data this month</div>`;
-                return;
-            }
-
-            const total = entries.reduce((s, [,n]) => s + n, 0);
-            const canvasId = `wt-chart-${containerId}`;
-            const colors   = entries.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]);
-
-            el.innerHTML = `
-                <div class="wt-body">
-                    <div class="wt-chart-area">
-                        <canvas id="${canvasId}"></canvas>
-                        <div class="wt-center">
-                            <div class="wt-center-val">${total}</div>
-                            <div class="wt-center-lbl">tasks</div>
-                        </div>
-                    </div>
-                    <div class="wt-legend">
-                        ${entries.map(([name, count], i) => `
-                            <div class="wt-legend-item">
-                                <div class="wt-legend-dot" style="background:${colors[i]}"></div>
-                                <div class="wt-legend-name">${name}</div>
-                                <div class="wt-legend-count">${count}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-
-if (chartKey === 'des' && chartWtDes) { chartWtDes.destroy(); chartWtDes = null; }
-            if (chartKey === 'cre' && chartWtCre) { chartWtCre.destroy(); chartWtCre = null; }
-
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            const chart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: entries.map(([n]) => n),
-                    datasets: [{ data: entries.map(([,n]) => n), backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '68%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: item => ` ${item.label}: ${item.parsed} (${Math.round(item.parsed / total * 100)}%)`
-                            }
-                        }
-                    }
-                }
-            });
-
-            if (chartKey === 'des') chartWtDes = chart;
-            else chartWtCre = chart;
-        }
-
-        renderDonut(desEntries, 'wt-des', 'des');
-        renderDonut(creEntries, 'wt-cre', 'cre');
+    async function setMonth(y, m, pickDay) {
+        const d = new Date(y, m, 1);
+        month = { y: d.getFullYear(), m: d.getMonth() };
+        range = { start: ymd(d), end: ymd(new Date(month.y, month.m + 1, 0)) };
+        const t = todayStr();
+        selDate = pickDay === 'end' ? range.end : (t >= range.start && t <= range.end ? t : range.start);
+        renderTopBar();
+        document.getElementById('calendar').innerHTML = '<div class="dash-empty">Loading…</div>';
+        await loadMonthData();
+        renderAll();
     }
 
-    // ── Section 3: Work Breakdown (b-quest-work × tasks) ──
-    function renderWorkBreakdown(tasks) {
-        const { start, end } = monthRange();
-
-        const dTasks = tasks.filter(t => t.designer_deadline >= start && t.designer_deadline <= end);
-        const cTasks = tasks.filter(t => t.creative_deadline >= start && t.creative_deadline <= end);
-
-        function buildBreakdown(works, role, taskList, workField, statusField) {
-            return works
-                .filter(w => w.role === role)
-                .map(w => {
-                    const matched = taskList.filter(t => t[workField] === w.work);
-                    const done    = matched.filter(t => t[statusField] === 'Done').length;
-                    const pct     = matched.length > 0 ? Math.round(done / matched.length * 100) : null;
-                    return { work: w.work, tasks: matched.length, done, pct };
-                })
-                .sort((a, b) => b.tasks - a.tasks);
-        }
-
-        const desBreakdown = buildBreakdown(workList, 'Designer', dTasks, 'designer', 'designer_status');
-        const creBreakdown = buildBreakdown(workList, 'Creative', cTasks, 'creative', 'creative_status');
-
-        function renderWb(rows, color, fillColor, id) {
-            const el = document.getElementById(id);
-            if (!rows.length) { el.innerHTML = `<div class="col-empty">No work types configured</div>`; return; }
-            el.innerHTML = rows.map(r => {
-                const pctDisplay = r.pct !== null ? `${r.pct}%` : '—';
-                const barColor   = r.pct === 100 ? '#10b981' : fillColor;
-                return `
-                <div class="wb-row${r.tasks === 0 ? ' wb-zero' : ''}">
-                    <div>
-                        <div class="wb-name">${r.work}</div>
-                        ${r.tasks > 0 ? `<div class="wb-weight-bar"><div class="wb-weight-fill" style="width:${r.pct ?? 0}%;background:${barColor}"></div></div>` : ''}
-                    </div>
-                    <div class="wb-num" style="color:${r.tasks > 0 ? color : 'var(--c-muted)'}">${r.tasks}</div>
-                    <div class="wb-num" style="color:${r.pct === 100 ? '#10b981' : r.pct !== null ? 'var(--c-dark)' : 'var(--c-muted)'}">${pctDisplay}</div>
-                </div>`;
-            }).join('');
-        }
-
-        renderWb(desBreakdown, 'var(--c-des)', 'rgba(59,130,246,0.35)', 'wb-des');
-        renderWb(creBreakdown, 'var(--c-cre)', 'rgba(139,92,246,0.35)', 'wb-cre');
+    function renderAll() {
+        renderTopBar();
+        renderKpis();
+        renderCalendar();
+        renderDay();
+        renderCapacity();
+        renderTable();
+        document.getElementById('updatedAt').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // ── Section 5: Person Summary ──
-    function renderPersons(tasks) {
-        const { start, end } = monthRange();
+    // Day panel matches the calendar's height; its list scrolls inside.
+    function syncDayHeight() {
+        const day = document.getElementById('daySection');
+        day.style.height = window.innerWidth > 991 ? document.getElementById('calSection').offsetHeight + 'px' : '';
+    }
+    window.addEventListener('resize', syncDayHeight);
 
-        function buildMap(list, assignField, weightField, statusField, deadlineField) {
-            const map = {};
-            list.filter(t => t[deadlineField] >= start && t[deadlineField] <= end && t[assignField])
-                .forEach(t => {
-                    const k = t[assignField];
-                    if (!map[k]) map[k] = { tasks: 0, done: 0, weight: 0 };
-                    map[k].tasks++;
-                    if (t[statusField] === 'Done') map[k].done++;
-                    map[k].weight += (t[weightField] || 0);
+    // ── Summary cards — follow Month / Role / Person ──
+    function renderKpis() {
+        const t = todayStr();
+        const month = rows().filter(inMonth);
+        const card = (icon, bg, fg, label, val, foot, valColor = '') => `<div class="kpi-card">
+            <div class="kpi-label"><span class="kpi-icon" style="background:${bg};color:${fg}"><i class="bi ${icon}"></i></span>${label}</div>
+            <div class="kpi-val"${valColor ? ` style="color:${valColor}"` : ''}>${val}</div><div class="kpi-foot">${foot}</div></div>`;
+
+        // Tasks — count + split by status (status table order).
+        const st = {};
+        month.forEach(r => { const id = r.status_id || r.status; st[id] = (st[id] || 0) + 1; });
+        const stFoot = Object.entries(st).sort((a, b) => b[1] - a[1]).map(([id, n]) =>
+            `<span><i class="dot" style="background:${statusById[id]?.color || '#cbd5e1'}"></i>${esc(statusById[id]?.name || id)} <b>${n}</b></span>`).join('') || '<span>No tasks</span>';
+
+        // Overdue — not done, deadline already passed.
+        const over = overdueRows.filter(r => (!selRole || r.role_id === selRole) && (!person || r.assign === person)).sort((a, b) => a.deadline.localeCompare(b.deadline));
+        const oldest = over[0] ? Math.round((parse(t) - parse(over[0].deadline)) / 86400000) : 0;
+
+        // Capacity — average % of daily cap used on working days, per role.
+        const workDays = daysBetween(range.start, range.end).filter(ds => bqDayPct(ds, workdayWeight, holidays) > 0);
+        const capOf = ro => {
+            const cap = roleCap(ro.id); if (!cap) return null;
+            const mine = rows({ ignorePerson: true }).filter(r => r.role_id === ro.id);
+            let total = 0, overDays = 0;
+            workDays.forEach(ds => { const l = loadOf(mine.filter(r => coveredDays(r).includes(ds)), ds); total += l; if (l > cap) overDays++; });
+            return { pct: workDays.length ? Math.round(total / (cap * workDays.length) * 100) : 0, overDays };
+        };
+        let capVal, capFoot;
+        if (person) {
+            const pts = r1(month.reduce((s, r) => s + (Number(r.weight) || 0), 0));
+            capVal = `${pts}<small>pt</small>`; capFoot = `<span>${esc(person)}'s points due this month</span>`;
+        } else {
+            const per = shownRoles().map(ro => ({ ro, c: capOf(ro) })).filter(x => x.c);
+            const totalOver = per.reduce((s, x) => s + x.c.overDays, 0);
+            capVal = per.length === 1 ? `${per[0].c.pct}%` : per.length ? `${Math.round(per.reduce((s, x) => s + x.c.pct, 0) / per.length)}%` : '–';
+            capFoot = (per.length > 1 ? per.map(x => `<span><i class="dot" style="background:${x.ro.color}"></i>${esc(x.ro.name)} <b>${x.c.pct}%</b></span>`).join('') : '')
+                + `<span style="${totalOver ? 'color:#b91c1c' : ''}"><b style="${totalOver ? 'color:#b91c1c' : ''}">${totalOver}</b> day${totalOver === 1 ? '' : 's'} over</span>`;
+        }
+
+        // Unassigned — not done, nobody on it yet.
+        const un = month.filter(r => !r.assign && !isDone(r)).sort((a, b) => a.deadline.localeCompare(b.deadline));
+
+        document.getElementById('kpiRow').innerHTML =
+            card('bi-kanban', 'rgba(var(--c-accent-rgb),0.2)', 'var(--c-accent-dark)', 'Tasks', `${new Set(month.map(r => r.quest_id)).size}<small>this month</small>`, stFoot) +
+            card('bi-exclamation-triangle-fill', 'rgba(245,158,11,0.14)', '#b45309', 'Overdue', over.length, over.length ? `<span class="ellip">Oldest <b>${oldest} day${oldest === 1 ? '' : 's'}</b> · ${esc(over[0].quest.task_name || '')}</span>` : '<span>All on time</span>', over.length ? '#b45309' : '') +
+            card('bi-speedometer2', 'rgba(59,130,246,0.12)', '#3b82f6', person ? 'Workload' : 'Capacity', capVal, capFoot) +
+            card('bi-person-dash', 'rgba(239,68,68,0.1)', '#dc2626', 'Unassigned', un.length, un.length ? `<span class="ellip">Next due <b>${fmtShort(un[0].deadline)}</b> · ${esc(un[0].quest.task_name || '')}</span>` : '<span>Everything has an owner</span>', un.length ? '#dc2626' : '');
+    }
+
+    // ── Calendar ──
+    function renderCalendar() {
+        const t = todayStr();
+        const days = daysBetween(mondayOf(range.start), addDays(mondayOf(range.end), 6));
+        const list = rows();
+        const showBar = !person; // capacity is per role, not per person
+        let html = '<div class="cal-dow">' + ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<span>${d}</span>`).join('') + '</div>';
+        for (let w = 0; w < days.length; w += 7) {
+            html += '<div class="cal-week">' + days.slice(w, w + 7).map(ds => {
+                const num = `<span class="cal-num">${parse(ds).getDate()}</span>`;
+                if (ds < range.start || ds > range.end) return `<div class="cal-day out">${num}</div>`;
+                const off = bqDayPct(ds, workdayWeight, holidays) === 0;
+                const active = list.filter(r => coveredDays(r).includes(ds));
+                const cls = ['cal-day', off ? 'off' : '', ds < t ? 'past' : '', ds === t ? 'today' : '', ds === selDate ? 'sel' : ''].join(' ');
+                let body = '', tip = [];
+                shownRoles().forEach(ro => {
+                    const mine = active.filter(r => r.role_id === ro.id);
+                    if (!mine.length) return;
+                    const cap = roleCap(ro.id), load = loadOf(mine, ds), pct = cap ? Math.round(load / cap * 100) : 0;
+                    tip.push(`${ro.name}: ${mine.length} task${mine.length === 1 ? '' : 's'}${showBar && cap ? ` · ${r1(load)}/${cap} pt (${pct}%)` : ''}`);
+                    body += `<div class="cal-line"><span class="dot" style="background:${ro.color}"></span>
+                        ${showBar && cap ? `<span class="cal-bar"><i class="${pct > 100 ? 'over' : ''}" style="width:${Math.min(pct, 100)}%;background:${ro.color}"></i></span>` : '<span style="flex:1"></span>'}
+                        <span class="n">${mine.length || ''}</span></div>`;
                 });
-            return Object.entries(map).sort((a, b) => b[1].weight - a[1].weight);
+                if (!body && off) body = '<span class="cal-off">Off</span>';
+                return `<div class="${cls}" data-day="${ds}" title="${esc(tip.join('\n'))}">${num}${body}</div>`;
+            }).join('') + '</div>';
         }
-
-        const desData = buildMap(tasks.filter(t => t.designer_deadline), 'designer_assign', 'designer_weight', 'designer_status', 'designer_deadline');
-        const creData = buildMap(tasks.filter(t => t.creative_deadline), 'creative_assign', 'creative_weight', 'creative_status', 'creative_deadline');
-
-        function renderPs(entries, taskColor, id) {
-            const el = document.getElementById(id);
-            if (!entries.length) { el.innerHTML = `<div class="col-empty">No data this month</div>`; return; }
-            el.innerHTML = entries.map(([name, d]) => `
-                <div class="ps-row">
-                    <div class="ps-name">${name}</div>
-                    <div class="ps-num" style="color:${taskColor}">${d.tasks}</div>
-                    <div class="ps-num" style="color:${d.done === d.tasks && d.tasks > 0 ? '#10b981' : 'var(--c-slate)'}">${d.done}</div>
-                    <div class="ps-num" style="color:var(--c-dark)">${d.weight}</div>
-                </div>
-            `).join('');
-        }
-
-        renderPs(desData, 'var(--c-des)', 'ps-des');
-        renderPs(creData, 'var(--c-cre)', 'ps-cre');
+        document.getElementById('calendar').innerHTML = html;
+        document.getElementById('calTitle').textContent = `Calendar · ${MONTHS[month.m]} ${month.y}` + (person ? ` · ${person}` : '');
+        document.getElementById('calLegend').innerHTML = showBar
+            ? `<span>Bar = capacity used</span><span><i class="sw" style="background:#ef4444"></i> Over capacity</span><span>· number = tasks that day</span>`
+            : `<span>Number = ${esc(person)}'s tasks that day</span>`;
+        syncDayHeight();
     }
 
-    // ── Section 4: Daily Capacity Timeline ──
-    function renderTimeline(tasks) {
-        const { start, end } = monthRange();
-        const days   = daysInMonth(curYear, curMonth);
-        const labels = Array.from({ length: days }, (_, i) => i + 1);
+    // ── Day panel ──
+    function renderDay() {
+        const list = rows().filter(r => coveredDays(r).includes(selDate));
+        const due = list.filter(r => r.deadline === selDate), ongoing = list.filter(r => r.deadline !== selDate);
+        document.getElementById('dayTitle').textContent = fmtLong(selDate);
+        document.getElementById('daySum').innerHTML = shownRoles().map(ro => {
+            const mine = list.filter(r => r.role_id === ro.id);
+            const cap = roleCap(ro.id), load = r1(loadOf(mine, selDate));
+            const over = !person && cap && load > cap;
+            return `<span class="${over ? 'over' : ''}"><i class="dot" style="background:${ro.color}"></i>${esc(ro.name)} <b>${mine.length}</b>${!person && cap ? ` · ${load}/${cap} pt` : ''}</span>`;
+        }).join('');
+        const item = r => {
+            const ro = roleById[r.role_id];
+            return `<div class="task-item"><span class="task-bar" style="background:${ro.color}"></span><div class="task-main">
+                ${rowLink(r)}
+                <div class="task-sub">${esc(r.quest.account_name || '-')} · ${esc(r.quest.opportunity_name || '-')}</div>
+                <div class="task-meta">${r.assign ? `${avatar(r.assign)}${esc(r.assign)}` : '<span class="task-sub" style="margin:0">Unassigned</span>'}${statusChip(r)}${r.deadline !== selDate ? `<span class="task-sub" style="margin:0">due ${fmtShort(r.deadline)}</span>` : ''}</div>
+            </div></div>`;
+        };
+        document.getElementById('dayList').innerHTML = !list.length ? '<div class="dash-empty">No tasks on this day</div>' :
+            (due.length ? `<div class="day-group">Due · ${due.length}</div>${due.map(item).join('')}` : '') +
+            (ongoing.length ? `<div class="day-group">In progress · ${ongoing.length}</div>${ongoing.sort((a, b) => a.deadline.localeCompare(b.deadline)).map(item).join('')}` : '');
+    }
 
-        function buildDayWeights(role) {
-            const spread = bqSpreadWeight(tasks.filter(t => t[`${role}_deadline`]), role, start, end, pad, dashWorkdayWeight, dashHolidays);
-            // due + ongoing here are a split of the SAME total (spread.weightMap),
-            // not two independently-computed numbers — they always sum back to
-            // it exactly, so the stacked bar's height matches the real capacity
-            // load instead of double-counting spread-in tasks in both segments.
-            return {
-                due:     labels.map(d => spread.dueWeightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0),
-                ongoing: labels.map(d => spread.ongoingWeightMap[`${curYear}-${pad(curMonth+1)}-${pad(d)}`] || 0)
-            };
-        }
-
-        const desWeights = buildDayWeights('designer');
-        const creWeights = buildDayWeights('creative');
-
-        const today = new Date();
-        const todayIdx = (today.getFullYear() === curYear && today.getMonth() === curMonth)
-            ? today.getDate() - 1 : null;
-
-        document.getElementById('cap-badge-des').textContent = capDes > 0 ? `Max ${capDes} / day` : '';
-        document.getElementById('cap-badge-cre').textContent = capCre > 0 ? `Max ${capCre} / day` : '';
-
-        function makeChart(canvasId, dueData, ongoingData, cap, dueColor, ongoingColor, overColor, key) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-
-            if (key === 'des' && chartDes) { chartDes.destroy(); chartDes = null; }
-            if (key === 'cre' && chartCre) { chartCre.destroy(); chartCre = null; }
-
-            const total = dueData.map((v, i) => v + ongoingData[i]);
-            const dueBgs = dueData.map((v, i) => {
-                const isOver = cap > 0 && total[i] > cap;
-                if (i === todayIdx) return isOver ? 'rgba(239,68,68,0.9)' : dueColor.replace('0.7', '0.9');
-                return isOver ? overColor : dueColor;
+    // ── Daily Capacity — one card per role, side by side ──
+    function renderCapacity() {
+        capCharts.forEach(c => c.destroy()); capCharts = [];
+        const days = daysBetween(range.start, range.end), t = todayStr();
+        const list = rows();
+        const track = document.getElementById('capTrack');
+        track.classList.toggle('single', shownRoles().length === 1);
+        track.innerHTML = shownRoles().map(r => `<div class="cap-card">
+            <div class="cap-card-hd" style="background:${hexToRgba(r.color, 0.08)};color:${r.color};border-color:${hexToRgba(r.color, 0.25)}"><i class="bi ${esc(r.icon || 'bi-person-workspace')}"></i> ${esc(r.name)}<span class="max">${roleCap(r.id) ? `Max ${roleCap(r.id)} / day` : 'No cap set'}</span></div>
+            <div class="cap-wrap"><canvas id="cap-${esc(r.id)}"></canvas></div></div>`).join('');
+        shownRoles().forEach(r => {
+            const mine = list.filter(x => x.role_id === r.id);
+            const due = [], ongoing = [];
+            days.forEach(ds => {
+                const pct = bqDayPct(ds, workdayWeight, holidays) / 100;
+                let d = 0, o = 0;
+                mine.forEach(x => { if (coveredDays(x).includes(ds)) { const w = (Number(x.weight) || 0) * pct; if (x.deadline === ds) d += w; else o += w; } });
+                due.push(r1(d)); ongoing.push(r1(o));
             });
-
+            const cap = roleCap(r.id);
             const datasets = [
-                {
-                    label: 'Ongoing',
-                    data: ongoingData,
-                    backgroundColor: ongoingColor,
-                    borderRadius: 0,
-                    stack: 'load',
-                    order: 2
-                },
-                {
-                    label: 'Due',
-                    data: dueData,
-                    backgroundColor: dueBgs,
-                    borderRadius: 3,
-                    stack: 'load',
-                    order: 2
-                }
+                { label: 'In progress', data: ongoing, backgroundColor: hexToRgba(r.color, 0.25), stack: 's', order: 2 },
+                { label: 'Due', data: due, borderRadius: 3, stack: 's', order: 2, backgroundColor: due.map((v, i) => !person && cap && v + ongoing[i] > cap ? 'rgba(239,68,68,0.75)' : hexToRgba(r.color, days[i] === t ? 0.95 : 0.75)) },
             ];
-
-            if (cap > 0) {
-                datasets.push({
-                    label: `Cap ${cap}`,
-                    data: Array(days).fill(cap),
-                    type: 'line',
-                    borderColor: 'rgba(239,68,68,0.6)',
-                    borderWidth: 1.5,
-                    borderDash: [5, 4],
-                    pointRadius: 0,
-                    fill: false,
-                    order: 1
-                });
-            }
-
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels, datasets },
+            if (cap && !person) datasets.push({ label: 'Cap', data: days.map(() => cap), type: 'line', borderColor: 'rgba(239,68,68,0.6)', borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, fill: false, order: 1 });
+            capCharts.push(new Chart(document.getElementById(`cap-${r.id}`), {
+                type: 'bar', data: { labels: days.map(ds => parse(ds).getDate()), datasets },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9 }, color: '#94a3b8', filter: item => item.text === 'Ongoing' || item.text === 'Due' } },
-                        tooltip: {
-                            callbacks: {
-                                title: items => `Day ${items[0].label}`,
-                                label: item => ` ${item.dataset.label}: ${item.parsed.y}`
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                            grid: { display: false },
-                            ticks: { font: { size: 9 }, maxRotation: 0, color: '#94a3b8' }
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 9 }, color: '#94a3b8', precision: 0 }
-                        }
-                    }
-                }
-            });
-
-            if (key === 'des') chartDes = chart;
-            else chartCre = chart;
-        }
-
-        makeChart('chart-des', desWeights.due, desWeights.ongoing, capDes, 'rgba(59,130,246,0.75)',  'rgba(59,130,246,0.25)',  'rgba(239,68,68,0.75)', 'des');
-        makeChart('chart-cre', creWeights.due, creWeights.ongoing, capCre, 'rgba(139,92,246,0.75)', 'rgba(139,92,246,0.25)', 'rgba(239,68,68,0.75)', 'cre');
-    }
-
-    // ── Section 6: Calendar Heatmap ──
-    let calSelectedDate = null;
-    let calAllTasks = [];
-
-    function heatClass(weight, cap, prefix) {
-        if (weight === 0) return '';
-        if (cap > 0 && weight > cap) return `heat-${prefix}-over`;
-        const ratio = cap > 0 ? weight / cap : weight;
-        if (ratio <= 0.2) return `heat-${prefix}-1`;
-        if (ratio <= 0.4) return `heat-${prefix}-2`;
-        if (ratio <= 0.6) return `heat-${prefix}-3`;
-        if (ratio <= 0.8) return `heat-${prefix}-4`;
-        return `heat-${prefix}-5`;
-    }
-
-    function renderCalendar(tasks) {
-        calAllTasks = tasks;
-        const { start, end } = monthRange();
-        const days = daysInMonth(curYear, curMonth);
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-
-        const des = bqSpreadWeight(tasks, 'designer', start, end, pad, dashWorkdayWeight, dashHolidays);
-        const cre = bqSpreadWeight(tasks, 'creative', start, end, pad, dashWorkdayWeight, dashHolidays);
-        const desMap = des.weightMap, desTaskCount = des.dueCount, desOngoingCount = des.ongoingCount;
-        const creMap = cre.weightMap, creTaskCount = cre.dueCount, creOngoingCount = cre.ongoingCount;
-
-        function buildGrid(containerId, weightMap, taskCountMap, ongoingCountMap, cap, prefix) {
-            const el = document.getElementById(containerId);
-            const firstDow = new Date(curYear, curMonth, 1).getDay();
-            const startOffset = firstDow;
-            const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-            let html = `<div class="cal-dow-row">${DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}</div>`;
-
-            // weeks
-            let dayNum = 1;
-            for (let week = 0; week < 6; week++) {
-                if (dayNum > days) break;
-                html += `<div class="cal-week-row">`;
-                for (let dow = 0; dow < 7; dow++) {
-                    const cellIdx = week * 7 + dow;
-                    if (cellIdx < startOffset || dayNum > days) {
-                        html += `<div class="cal-day cal-empty"></div>`;
-                    } else {
-                        const dateStr = `${curYear}-${pad(curMonth+1)}-${pad(dayNum)}`;
-                        const w = weightMap[dateStr] || 0;
-                        const tc = taskCountMap[dateStr] || 0;
-                        const oc = ongoingCountMap[dateStr] || 0;
-                        const heat = heatClass(w, cap, prefix);
-                        const isToday = dateStr === todayStr;
-                        const isPast = dateStr < todayStr;
-                        const isSel = dateStr === calSelectedDate;
-                        const cls = [heat, isToday ? 'cal-today' : '', isPast && !heat ? 'cal-past' : '', isSel ? 'cal-selected' : ''].filter(Boolean).join(' ');
-                        const isOver = cap > 0 && w > cap;
-                        const badgeDue = tc > 0 ? `<span class="cal-badge ${isOver ? 'cal-badge-over' : 'cal-badge-task'}">${tc} due</span>` : '';
-                        const badgeOng = oc > 0 ? `<span class="cal-badge cal-badge-ongoing">${oc} ongoing</span>` : '';
-                        const badges = (tc > 0 || oc > 0) ? `<div class="cal-badges">${badgeDue}${badgeOng}</div>` : '';
-                        html += `<div class="cal-day ${cls}" data-date="${dateStr}" data-role="${prefix}">
-                            <span class="cal-day-num">${dayNum}</span>
-                            ${badges}
-                        </div>`;
-                        dayNum++;
-                    }
-                }
-                html += `</div>`;
-            }
-            el.innerHTML = html;
-
-            el.querySelectorAll('.cal-day:not(.cal-empty)').forEach(cell => {
-                cell.onclick = () => {
-                    calSelectedDate = cell.dataset.date;
-                    renderDayDetail(calSelectedDate);
-                };
-            });
-        }
-
-        const isCurrentMonth = today.getFullYear() === curYear && today.getMonth() === curMonth;
-        if (!calSelectedDate && isCurrentMonth) {
-            calSelectedDate = todayStr;
-        }
-
-        buildGrid('cal-des', desMap, desTaskCount, desOngoingCount, capDes, 'des');
-        buildGrid('cal-cre', creMap, creTaskCount, creOngoingCount, capCre, 'cre');
-
-    }
-
-    function renderDayDetail(dateStr) {
-        const { start, end } = monthRange();
-        if (dateStr < start || dateStr > end) return;
-
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const label = new Date(y, m-1, d).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        document.getElementById('dm-date').textContent = label;
-
-        const desDue  = calAllTasks.filter(t => t.designer_deadline === dateStr);
-        const creDue  = calAllTasks.filter(t => t.creative_deadline === dateStr);
-
-        const desInProgress = calAllTasks.filter(t => {
-            if (!t.designer_deadline) return false;
-            if (t.designer_deadline <= dateStr) return false;
-            const day = t.designer_day || 1;
-            const dl = new Date(t.designer_deadline);
-            const startDate = new Date(dl);
-            startDate.setDate(startDate.getDate() - day + 1);
-            return startDate.toISOString().slice(0,10) <= dateStr;
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 9 }, color: '#94a3b8', filter: i => i.text !== 'Cap' } },
+                        tooltip: { callbacks: { title: it => fmtLong(days[it[0].dataIndex]), label: i => ` ${i.dataset.label}: ${i.parsed.y} pt` } } },
+                    scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, color: '#94a3b8' } },
+                        y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#94a3b8' } } },
+                    onClick: (_, els) => { if (els[0]) { selDate = days[els[0].index]; renderCalendar(); renderDay(); } },
+                },
+            }));
         });
-        const creInProgress = calAllTasks.filter(t => {
-            if (!t.creative_deadline) return false;
-            if (t.creative_deadline <= dateStr) return false;
-            const day = t.creative_day || 1;
-            const dl = new Date(t.creative_deadline);
-            const startDate = new Date(dl);
-            startDate.setDate(startDate.getDate() - day + 1);
-            return startDate.toISOString().slice(0,10) <= dateStr;
-        });
-
-        function statusCls(s) {
-            if (s === 'Done') return 'status-done';
-            if (s === 'On Progress') return 'status-progress';
-            return 'status-pending';
-        }
-        function statusLabel(s) { return s || 'Pending'; }
-
-        function renderTaskCards(taskList, assignField, weightField, dayField, statusField, wCls, isDue) {
-            if (!taskList.length) return '';
-            const deadlineField = assignField === 'designer_assign' ? 'designer_deadline' : 'creative_deadline';
-            const workField     = assignField === 'designer_assign' ? 'designer' : 'creative';
-            return taskList.map(t => {
-                const wLabel   = isDue ? `${t[workField] || '?'}  •  w: ${t[weightField] || 0}` : `${t[workField] || '?'}  •  w: ${t[weightField] || 0}/day`;
-                const deadline = t[deadlineField] || '—';
-                return `
-                <div class="day-task-card">
-                    <div class="day-task-row1">
-                        <span class="day-task-name">${t.task_name || '—'}</span>
-                        <span class="day-task-status ${statusCls(t[statusField])}">${statusLabel(t[statusField])}</span>
-                    </div>
-                    <div class="day-task-row2">
-                        ${t.account_name ? `<span class="day-task-account">${t.account_name}</span>` : ''}
-                        ${t.account_name && t.opportunity_name ? `<span class="day-task-dot">|</span>` : ''}
-                        ${t.opportunity_name ? `<span class="day-task-opp">${t.opportunity_name}</span>` : ''}
-                    </div>
-                    <div class="day-task-row3">
-                        <span class="day-task-w ${wCls}">${t[workField] || '—'}</span>
-                        <span class="day-task-spacer"></span>
-                        <span class="day-task-meta"><i class="bi bi-person-fill"></i>${t[assignField] || '—'}</span>
-                        <span class="day-task-dot">·</span>
-                        <span class="day-task-meta"><i class="bi bi-person-lines-fill"></i>${t.owner || '—'}</span>
-                        <span class="day-task-dot">·</span>
-                        <span class="day-task-meta"><i class="bi bi-calendar3"></i>${deadline}</span>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        const sectionLabel = (text, mt = false) =>
-            `<div style="font-size:0.6rem;font-weight:800;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.6px;${mt ? 'margin:10px 0 6px' : 'margin-bottom:6px'}">${text}</div>`;
-
-        function buildSection(inProgress, due, assignField, weightField, dayField, statusField, wCls) {
-            let html = '';
-            if (due.length) {
-                if (inProgress.length) html += sectionLabel('📌 Due Today');
-                html += renderTaskCards(due, assignField, weightField, dayField, statusField, wCls, true);
-            }
-            if (inProgress.length) {
-                html += sectionLabel('🔄 Ongoing', due.length > 0);
-                html += renderTaskCards(inProgress, assignField, weightField, dayField, statusField, wCls, false);
-            }
-            return html || `<div class="day-empty">No tasks</div>`;
-        }
-
-        document.getElementById('day-tasks-des').innerHTML =
-            buildSection(desInProgress, desDue, 'designer_assign', 'designer_weight', 'designer_day', 'designer_status', 'day-task-w-des');
-        document.getElementById('day-tasks-cre').innerHTML =
-            buildSection(creInProgress, creDue, 'creative_assign', 'creative_weight', 'creative_day', 'creative_status', 'day-task-w-cre');
-
-        document.getElementById('day-modal-backdrop').style.display = 'block';
-        document.getElementById('day-modal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
     }
 
-    function closeDayModal() {
-        calSelectedDate = null;
-        document.getElementById('day-modal-backdrop').style.display = 'none';
-        document.getElementById('day-modal').style.display = 'none';
-        document.body.style.overflow = '';
-        renderCalendar(calAllTasks);
+    // ── Tasks table ──
+    function renderTable() {
+        const q = document.getElementById('tblSearch').value.trim().toLowerCase();
+        const t = todayStr(), box = document.getElementById('tbl');
+        if (tblMode === 'opp') {
+            const groups = new Map();
+            rows().filter(inMonth).forEach(r => { const k = oppKey(r.quest); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+            let list = [...groups.entries()].map(([k, rs]) => { const [opp, acc] = k.split('||'); return { k: 'o:' + k, opp, acc, rs, n: new Set(rs.map(r => r.quest_id)).size }; });
+            if (q) list = list.filter(g => `${g.opp} ${g.acc}`.toLowerCase().includes(q) || g.rs.some(r => (r.quest.task_name || '').toLowerCase().includes(q)));
+            list.sort((a, b) => b.n - a.n || a.opp.localeCompare(b.opp));
+            document.getElementById('tblCount').textContent = list.length;
+            if (!list.length) { box.innerHTML = '<div class="dash-empty">No tasks due this month</div>'; return; }
+            box.innerHTML = `<table class="dtbl"><thead><tr><th>Opportunity</th><th>Assign</th><th>Role</th><th>Status</th><th class="r">Due</th></tr></thead><tbody>${list.map(g => {
+                const st = {}; g.rs.forEach(r => { const id = r.status_id || r.status; st[id] = (st[id] || 0) + 1; });
+                const bar = Object.entries(st).map(([id, n]) => `<i style="flex:${n};background:${statusById[id]?.color || '#cbd5e1'}" title="${esc(statusById[id]?.name || id)}: ${n}"></i>`).join('');
+                const rc = roles.map(ro => [ro, g.rs.filter(r => r.role_id === ro.id).length]).filter(([, n]) => n).map(([ro, n]) => `<span><i class="dot" style="background:${ro.color}"></i>${n}</span>`).join('');
+                const dl = g.rs.map(r => r.deadline).sort(), next = dl.find(d => d >= t) || dl[0];
+                const open = openRows.has(g.k);
+                const head = `<tr class="x-row ${open ? 'open' : ''}" data-row="${esc(g.k)}"><td><i class="bi bi-chevron-right x-chev"></i><span class="strong">${esc(g.opp)}</span> <span class="muted">· ${esc(g.acc || '-')}</span> <span class="count-badge">${g.n} task${g.n === 1 ? '' : 's'}</span></td>
+                    <td class="muted">${new Set(g.rs.map(r => r.assign).filter(Boolean)).size} people</td><td><span class="role-counts">${rc}</span></td><td><span class="st-bar">${bar}</span></td><td class="r">next ${fmtShort(next)}</td></tr>`;
+                return !open ? head : head + [...g.rs].sort((a, b) => a.deadline.localeCompare(b.deadline)).map(r => `<tr class="x-sub">
+                    <td>${rowLink(r)}</td>
+                    <td>${r.assign ? `<span class="who">${avatar(r.assign)}${esc(r.assign)}</span>` : '<span class="muted">Unassigned</span>'}</td>
+                    <td>${roleBadge(r.role_id)}</td><td>${statusChip(r)}</td><td class="r muted">${fmtShort(r.deadline)}</td></tr>`).join('');
+            }).join('')}</tbody></table>`;
+        } else {
+            const by = new Map();
+            createdQuests.filter(x => (!selRole || (x.roles || []).some(r => r.role_id === selRole)) && (!person || (x.roles || []).some(r => r.assign === person)))
+                .forEach(x => { const o = x.owner || '(No owner)'; if (!by.has(o)) by.set(o, []); by.get(o).push(x); });
+            let list = [...by.entries()].map(([o, qs]) => ({ k: 'w:' + o, o, qs }));
+            if (q) list = list.filter(g => g.o.toLowerCase().includes(q) || g.qs.some(x => `${x.task_name} ${x.account_name} ${x.opportunity_name}`.toLowerCase().includes(q)));
+            list.sort((a, b) => b.qs.length - a.qs.length);
+            document.getElementById('tblCount').textContent = list.length;
+            if (!list.length) { box.innerHTML = '<div class="dash-empty">No tasks opened this month</div>'; return; }
+            box.innerHTML = `<table class="dtbl"><thead><tr><th>Owner</th><th>Opened</th><th>Role</th><th>Opportunity</th></tr></thead><tbody>${list.map(g => {
+                const rc = roles.map(ro => [ro, g.qs.filter(x => (x.roles || []).some(r => r.role_id === ro.id)).length]).filter(([, n]) => n).map(([ro, n]) => `<span><i class="dot" style="background:${ro.color}"></i>${n}</span>`).join('');
+                const last = g.qs.map(x => x._day).sort().pop();
+                const open = openRows.has(g.k);
+                const head = `<tr class="x-row ${open ? 'open' : ''}" data-row="${esc(g.k)}"><td><i class="bi bi-chevron-right x-chev"></i><span class="who">${avatar(g.o)}<span class="strong">${esc(g.o)}</span> <span class="count-badge">${g.qs.length} opened</span></span></td>
+                    <td class="muted">last ${fmtShort(last)}</td><td><span class="role-counts">${rc}</span></td><td class="muted">${new Set(g.qs.map(x => x.opportunity_name).filter(Boolean)).size} opportunities</td></tr>`;
+                return !open ? head : head + [...g.qs].sort((a, b) => b.create_date.localeCompare(a.create_date)).map(x => `<tr class="x-sub">
+                    <td>${taskLink(x.id, x.task_name, (x.roles || []).some(rr => canEditRow(rr.role_id, rr.assign, x.owner)))}</td>
+                    <td>${fmtShort(x._day)}</td>
+                    <td>${(x.roles || []).map(r => roleBadge(r.role_id)).join(' ')}</td><td class="muted">${esc(x.account_name || '-')} · ${esc(x.opportunity_name || '-')}</td></tr>`).join('');
+            }).join('')}</tbody></table>`;
+        }
     }
 
-    // Escape to close modal
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDayModal(); });
+    // ── Wiring (delegated; values come from data-* attributes) ──
+    document.addEventListener('click', e => {
+        const pop = document.getElementById('monthPop');
+        if (pop.classList.contains('show') && !e.target.closest('.month-box')) pop.classList.remove('show');
+        const edit = e.target.closest('[data-edit]');
+        if (edit && typeof openTaskModal === 'function') { e.preventDefault(); e.stopPropagation(); openTaskModal(edit.dataset.edit, workList); return; }
+        const el = e.target.closest('[data-month-step],[data-month-open],[data-pop-year],[data-pick-month],[data-day],[data-day-step],[data-tbl],[data-row]');
+        if (!el) return;
+        const d = el.dataset;
+        if (d.monthStep) return setMonth(month.y, month.m + Number(d.monthStep));
+        if ('monthOpen' in d) { popYear = month.y; renderMonthPop(); pop.classList.toggle('show'); return; }
+        if (d.popYear) { popYear += Number(d.popYear); renderMonthPop(); return; }
+        if (d.pickMonth) { pop.classList.remove('show'); return setMonth(popYear, Number(d.pickMonth)); }
+        if (d.day) { selDate = d.day; renderCalendar(); return renderDay(); }
+        if (d.dayStep) {
+            const next = addDays(selDate, Number(d.dayStep));
+            if (next < range.start) return setMonth(month.y, month.m - 1, 'end');
+            if (next > range.end) return setMonth(month.y, month.m + 1);
+            selDate = next; renderCalendar(); return renderDay();
+        }
+        if (d.tbl) { tblMode = d.tbl; openRows.clear(); document.querySelectorAll('#tblSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.tbl === tblMode)); return renderTable(); }
+        if (d.row) { openRows.has(d.row) ? openRows.delete(d.row) : openRows.add(d.row); return renderTable(); }
+    });
+    document.getElementById('tblSearch').addEventListener('input', () => renderTable());
+    // b-quest-modal.js calls this after a successful Save (instead of
+    // reloading the page) — re-fetch the month and redraw, keeping the
+    // selected month / role / person / day.
+    window.refreshSingleCard = async () => { await loadMonthData(); renderAll(); };
 
-    // ── Init ──
-    initMonth();
-    initLayout(B_QUEST_CONFIG);
-    loadRoleList();
-    loadData();
+    async function initPage() {
+        sessionStorage.removeItem('bx_perms_bquest');
+        await initLayout(B_QUEST_CONFIG);
+        // Same flag the header menu uses for the Dashboard link.
+        if (!getBquestPerms()?.dashboard) { window.location.replace('b-quest-list.html'); return; }
+        await loadMaster();
+        try { const saved = localStorage.getItem('bq_dash_role'); if (saved && roleById[saved]) selRole = saved; } catch {}
+        roleSeg.render();
+        const n = new Date();
+        await setMonth(n.getFullYear(), n.getMonth());
+    }
+    initPage();
 </script>
 </body>
 </html>
