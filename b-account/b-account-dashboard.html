@@ -174,8 +174,13 @@
            table, height driven by however many lead sources there are)
            instead of leaving a gap under the chart. */
         .split-grid { display: grid; grid-template-columns: 1fr 560px; gap: 14px; align-items: stretch; }
-        .split-grid > .dash-card { display: flex; flex-direction: column; }
-        @media (max-width: 900px) { .split-grid { grid-template-columns: 1fr; } }
+        .split-grid > .dash-card { display: flex; flex-direction: column; min-width: 0; }
+        /* minmax(0,1fr), not 1fr: a bare 1fr track has an auto minimum = its
+           content's min-width, so the nowrap Lead Source table forced the
+           whole column wider than the phone and the inner overflow-x:auto
+           wrapper never overflowed (body's overflow-x:hidden then clipped
+           it, unscrollable). */
+        @media (max-width: 900px) { .split-grid { grid-template-columns: minmax(0, 1fr); } }
 
         /* ── Two self-contained donut cards side by side (BU share | Business
            Type share) — each card carries its own chart + legend together,
