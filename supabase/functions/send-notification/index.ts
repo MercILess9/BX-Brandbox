@@ -27,10 +27,35 @@ function gpPct(gp: number, amt: number): string {
   return (gp / amt * 100).toFixed(1) + '%'
 }
 
+// Sender and recipients come from Function secrets, never from the request:
+// this function has verify_jwt off and its body is caller-controlled, so a
+// `to` taken from the body would let anyone send mail as our verified domain.
+//   MAIL_FROM  e.g. "BrandStrom X <noreply@brandboxplatform.com>"
+//   NOTIFY_TO  comma-separated recipient list (no secret = nothing is sent)
+const MAIL_FROM = Deno.env.get('MAIL_FROM') || 'Brandbox Platform <noreply@brandboxplatform.com>'
+const NOTIFY_TO = (Deno.env.get('NOTIFY_TO') || '').split(',').map(s => s.trim()).filter(Boolean)
+
+// Only a signed-in Brandbox user may trigger a send.
+async function isSignedIn(req: Request): Promise<boolean> {
+  const auth = req.headers.get('Authorization') || ''
+  if (!auth.startsWith('Bearer ')) return false
+  const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, {
+    headers: { Authorization: auth, apikey: Deno.env.get('SUPABASE_ANON_KEY') || '' },
+  })
+  return r.ok
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
+    if (!(await isSignedIn(req))) {
+      return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), {
+        status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!NOTIFY_TO.length) throw new Error('NOTIFY_TO secret is not set')
+
     const body = await req.json()
     const {
       action = 'new',
@@ -44,7 +69,6 @@ serve(async (req) => {
       signQTs  = [],        // original QTs
       churnQTs = [],        // churn QTs (only for action='churn')
       qts      = [],        // fallback (new opportunity)
-      to = ['thitiphon@brand-strom.com'],
     } = body
 
     const cfg = ACTION_CFG[action] || ACTION_CFG.new
@@ -327,8 +351,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Brandbox <onboarding@resend.dev>',
-        to,
+        from: MAIL_FROM,
+        to: NOTIFY_TO,
         subject: `[${cfg.label}] ${opportunity_id ? opportunity_id + ' · ' : ''}${opportunity_name || ''}`,
         html,
       }),

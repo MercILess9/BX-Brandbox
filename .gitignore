@@ -4,3 +4,4 @@
 .claude/settings.json
 .claude/projects/
 supabase/.temp/
+supabase/email-templates/preview/

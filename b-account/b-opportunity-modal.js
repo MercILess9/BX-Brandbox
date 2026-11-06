@@ -1607,9 +1607,11 @@ const BOppApp = (() => {
                 // untouched/still deployed, so this can be re-enabled by
                 // uncommenting once there's a real configurable recipient.
                 /*
+                // The function now requires the caller's session token and
+                // reads its recipients from the NOTIFY_TO secret.
                 fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await supabaseClient.auth.getSession()).data.session?.access_token}` },
                     body: JSON.stringify({
                         opportunity_id:   oppId,
                         opportunity_name: payload.opportunity_name,
