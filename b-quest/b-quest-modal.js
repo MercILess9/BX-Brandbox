@@ -1029,11 +1029,12 @@ const BQuestApp = (() => {
             // query suffices, where the original legacy version needed two
             // ("same day" + "later deadline reaching back") only because it
             // filtered per-field instead of with a single >= comparison.
-            const { data: rows } = await supabaseClient
+            const { data: rows } = await fetchAllRows(() => supabaseClient
                 .from('b_quest_task_role')
                 .select('quest_id, weight, day, deadline, work')
                 .eq('role_id', roleId)
-                .gte('deadline', dl);
+                .gte('deadline', dl)
+                .order('id'));
 
             const relevant = currentQuestId ? (rows || []).filter(r => r.quest_id !== currentQuestId) : (rows || []);
             const existingTotal = relevant.reduce((sum, r) => sum + contributionOnDate(Number(r.weight) || 0, r.day, r.deadline, workdayWeight, dl), 0);
@@ -1125,7 +1126,7 @@ const BQuestApp = (() => {
         el('uni-search-clear').style.display = 'none';
 
         try {
-            const { data } = await supabaseClient.from('b_quest_list').select(fieldName);
+            const { data } = await fetchAllRows(() => supabaseClient.from('b_quest_list').select(fieldName).order('id'));
             // A newer openSearchOverlay/openAssignPicker call already took
             // over the shared overlay while this fetch was in flight —
             // don't clobber whatever it wired up.

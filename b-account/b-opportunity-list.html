@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
     <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
+    <script src="/system/system.js?v=2"></script>
     <script src="/system/multi-select.js"></script>
     <script src="/system/month-picker.js"></script>
     <script src="/system/date-picker.js"></script>
@@ -17,7 +17,7 @@
     <script src="b-account.js"></script>
     <link rel="stylesheet" href="/system/theme.css?v=2">
     <link rel="stylesheet" href="b-account.css?v=2">
-    <script src="b-opportunity-modal.js?v=2" defer></script>
+    <script src="b-opportunity-modal.js?v=3" defer></script>
     <style>
         /* overscroll-behavior-y alone doesn't fully stop Safari's own
            elastic bounce (it mostly governs scroll *chaining*, not the
@@ -396,6 +396,8 @@
     let _sortFilter = 'latest';
     let _searchText = '';
     let _page = 0, _hasMore = true, _fetching = false;
+    // fetchPage()'s ordered id list while BU/month/search filters are on, rebuilt on page 0.
+    let _orderedOppIds = null;
 
     // ── Filters ───────────────────────────────────────────────────────────────
     const statusSeg = createSegControl({
@@ -493,10 +495,13 @@
 
     async function loadMasterData() {
         const [{ data: idx, error }, { data: accs }, { data: qts }, { data: cfg }, { data: profiles }] = await Promise.all([
-            supabaseClient.from('b_opportunity_list')
-                .select('opportunity_id, opportunity_name, owner, am, sub_am, lead_source, business_type, status, remark, account_id, signed_date'),
-            supabaseClient.from('b_account_list').select('account_id, account_name, company_name'),
-            supabaseClient.from('b_opportunity_qt').select('opportunity_id, qt_number, company_qt, b_opportunity_qt_item(bu)'),
+            // fetchAllRows (system.js): this search index must cover every
+            // record, and Supabase silently stops at 1000 rows per response.
+            fetchAllRows(() => supabaseClient.from('b_opportunity_list')
+                .select('opportunity_id, opportunity_name, owner, am, sub_am, lead_source, business_type, status, remark, account_id, signed_date')
+                .order('opportunity_id')),
+            fetchAllRows(() => supabaseClient.from('b_account_list').select('account_id, account_name, company_name').order('account_id')),
+            fetchAllRows(() => supabaseClient.from('b_opportunity_qt').select('opportunity_id, qt_number, company_qt, b_opportunity_qt_item(bu)').order('qt_id')),
             supabaseClient.from('b_opportunity_config').select('type, value, color, active').in('type', ['bu', 'status', 'business_type']).order('value'),
             supabaseClient.from('profiles').select('codename, nick_name, avatar_url')
         ]);
@@ -603,24 +608,52 @@
         // cheap to carry for every row given the page size here is just
         // 10 (infinite scroll), not worth a second round-trip query
         // filtered to Churn only.
-        let query = supabaseClient.from('b_opportunity_list').select('*, b_opportunity_qt(qt_type, b_opportunity_qt_item(amount, gp))');
-        if (idFilter)              query = query.in('opportunity_id', [...idFilter]);
-        if (_typeFilters.length)   query = query.in('business_type', _typeFilters);
-        if (_statusFilter)         query = query.eq('status', _statusFilter);
-        if (_ownerFilters.length)  query = query.in('owner', _ownerFilters);
-        if (_amFilters.length)     query = query.in('am', _amFilters);
-        if (_leadFilters.length)   query = query.in('lead_source', _leadFilters);
-
-        query = _sortFilter === 'latest'
-            ? query.order('create_date', { ascending: false, nullsFirst: false })
-            : query.order('opportunity_name', { ascending: true });
-
+        const LIST_SELECT = '*, b_opportunity_qt(qt_type, b_opportunity_qt_item(amount, gp))';
+        const applyServerFilters = q => {
+            if (_typeFilters.length)   q = q.in('business_type', _typeFilters);
+            if (_statusFilter)         q = q.eq('status', _statusFilter);
+            if (_ownerFilters.length)  q = q.in('owner', _ownerFilters);
+            if (_amFilters.length)     q = q.in('am', _amFilters);
+            if (_leadFilters.length)   q = q.in('lead_source', _leadFilters);
+            return _sortFilter === 'latest'
+                ? q.order('create_date', { ascending: false, nullsFirst: false }).order('opportunity_id', { ascending: false })
+                : q.order('opportunity_name', { ascending: true }).order('opportunity_id', { ascending: true });
+        };
         const from = _page * 10;
-        query = query.range(from, from + 9);
 
         try {
-            const { data, error } = await query;
-            if (error) throw error;
+            let data;
+            if (idFilter) {
+                // BU / Signed month / search narrowed it to an id set: order
+                // + paginate here instead of sending every matching id to
+                // the server on every page (each id lengthens the URL, and
+                // the API rejects one past ~24KB). The ordered list is built
+                // once per filter state (page 0) from a light id+sort read
+                // with the same server-side filters and order as the plain
+                // path; each page then sends only its own 10 ids.
+                if (_page === 0 || !_orderedOppIds) {
+                    const sortCol = _sortFilter === 'latest' ? 'create_date' : 'opportunity_name';
+                    const { data: rows, error: oErr } = await fetchAllRows(() =>
+                        applyServerFilters(supabaseClient.from('b_opportunity_list').select(`opportunity_id, ${sortCol}`)));
+                    if (oErr) throw oErr;
+                    _orderedOppIds = (rows || []).map(r => r.opportunity_id).filter(id => idFilter.has(id));
+                }
+                const pageIds = _orderedOppIds.slice(from, from + 10);
+                if (pageIds.length) {
+                    const { data: pageRows, error } = await supabaseClient.from('b_opportunity_list').select(LIST_SELECT).in('opportunity_id', pageIds);
+                    if (error) throw error;
+                    const pos = new Map(pageIds.map((id, i) => [id, i]));
+                    data = (pageRows || []).sort((x, y) => pos.get(x.opportunity_id) - pos.get(y.opportunity_id));
+                } else {
+                    data = [];
+                }
+                if (from + 10 >= _orderedOppIds.length) _hasMore = false;
+            } else {
+                _orderedOppIds = null;
+                const { data: rows, error } = await applyServerFilters(supabaseClient.from('b_opportunity_list').select(LIST_SELECT)).range(from, from + 9);
+                if (error) throw error;
+                data = rows;
+            }
 
             if (!data || data.length === 0) {
                 if (render && _page === 0) showEmpty();

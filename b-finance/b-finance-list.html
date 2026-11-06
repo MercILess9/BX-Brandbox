@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
     <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
+    <script src="/system/system.js?v=2"></script>
     <script src="/system/multi-select.js"></script>
     <script src="/system/date-picker.js"></script>
     <script src="b-finance.js"></script>
@@ -226,9 +226,12 @@ async function loadLeftPanel() {
     const treeEl = document.getElementById('acctTree');
     try {
         // Step 1: Get qt_ids + bill_dates that have finance data
-        const { data: finRows, error: e1 } = await supabaseClient
+        // fetchAllRows/fetchByIds (system.js): this table is past 500 rows
+        // and the id lists below go into the URL — both have hard limits.
+        const { data: finRows, error: e1 } = await fetchAllRows(() => supabaseClient
             .from('b_finance_qt')
-            .select('qt_id, bill_date, actual_amount, receipt_date, receipt_no');
+            .select('qt_id, bill_date, actual_amount, receipt_date, receipt_no')
+            .order('id'));
         if (e1) throw e1;
 
         const finQtIds = [...new Set((finRows||[]).map(r => r.qt_id).filter(Boolean))];
@@ -252,11 +255,12 @@ async function loadLeftPanel() {
         // — company_qt lives directly on the QT itself (one per QT, unlike bu
         // which is per line-item), so it comes along for free here with no
         // extra query needed.
-        const { data: bqts, error: e2 } = await supabaseClient
+        const { data: bqts, error: e2 } = await fetchByIds(finQtIds, ids => supabaseClient
             .from('b_opportunity_qt')
             .select('qt_id, opportunity_id, qt_number, company_qt')
-            .in('qt_id', finQtIds)
-            .eq('qt_type', 'original');
+            .in('qt_id', ids)
+            .eq('qt_type', 'original')
+            .order('qt_id'));
         if (e2) throw e2;
 
         const oppIds = [...new Set((bqts||[]).map(q => q.opportunity_id).filter(Boolean))];
@@ -266,8 +270,8 @@ async function loadLeftPanel() {
         }
 
         // Step 3: Get account_ids + status
-        const { data: opps, error: e3 } = await supabaseClient
-            .from('b_opportunity_list').select('opportunity_id, account_id, status, opportunity_name, owner').in('opportunity_id', oppIds);
+        const { data: opps, error: e3 } = await fetchByIds(oppIds, ids => supabaseClient
+            .from('b_opportunity_list').select('opportunity_id, account_id, status, opportunity_name, owner').in('opportunity_id', ids).order('opportunity_id'));
         if (e3) throw e3;
 
         const accIds = [...new Set((opps||[]).map(o => o.account_id).filter(Boolean))];
@@ -327,12 +331,15 @@ async function loadLeftPanel() {
         });
 
         // Step 4: Get account/company info
-        const { data: accounts, error: e4 } = await supabaseClient
+        const { data: accounts, error: e4 } = await fetchByIds(accIds, ids => supabaseClient
             .from('b_account_list')
             .select('account_id, account_name, company_name, tax_id, address, contact, document, payment, remark')
-            .in('account_id', accIds)
-            .order('account_name');
+            .in('account_id', ids)
+            .order('account_id'));
         if (e4) throw e4;
+        // Chunks come back in chunk order — re-sort by name as the single
+        // .order('account_name') query used to.
+        accounts.sort((a, b) => (a.account_name || '').localeCompare(b.account_name || '', 'th'));
 
         _allAccounts = (accounts||[]).map(a => {
             const m = acctMeta.get(a.account_id);

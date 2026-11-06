@@ -337,6 +337,52 @@ if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') 
     document.head.appendChild(s);
 })();
 
+// ── Bulk reads that can't silently lose rows ──
+// Supabase caps every response at the project's "Max Rows" (1000 by
+// default) and silently drops the rest — no error. Bit B-Account
+// Dashboard 2026-10-13 (b_opportunity_qt_item past 1000 rows). Any read
+// that can return more than a page's worth goes through fetchAllRows().
+//
+//   fetchAllRows('table', 'col1, col2')              — whole table
+//   fetchAllRows(() => supabaseClient.from('t')      — with filters/order:
+//       .select('a').eq('x', 1).order('id'))           pass a function that
+//                                                      builds a FRESH query,
+//                                                      .range() is added here
+// Give paged reads a stable .order() (e.g. the primary key) when the
+// table is being written to — without one, rows can shift between pages.
+// Returns { data, error } like a normal query.
+async function fetchAllRows(tableOrBuild, select, pageSize = 1000) {
+    const build = typeof tableOrBuild === 'function'
+        ? tableOrBuild
+        : () => supabaseClient.from(tableOrBuild).select(select);
+    let from = 0;
+    let all = [];
+    while (true) {
+        const { data, error } = await build().range(from, from + pageSize - 1);
+        if (error) return { data: null, error };
+        all = all.concat(data || []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+    }
+    return { data: all, error: null };
+}
+
+// .in('col', ids) puts every id in the URL, and the API rejects a URL
+// past ~24KB with 400 Bad Request (measured 2026-11-06: ~650 UUIDs pass,
+// ~750 fail). fetchByIds() splits ids into chunks, runs each chunk
+// through fetchAllRows(), and merges the results.
+//   fetchByIds(ids, chunk => supabaseClient.from('t').select('a').in('id', chunk))
+async function fetchByIds(ids, buildForChunk, chunkSize = 200) {
+    const list = [...new Set(ids || [])];
+    if (!list.length) return { data: [], error: null };
+    const chunks = [];
+    for (let i = 0; i < list.length; i += chunkSize) chunks.push(list.slice(i, i + chunkSize));
+    const results = await Promise.all(chunks.map(c => fetchAllRows(() => buildForChunk(c))));
+    const failed = results.find(r => r.error);
+    if (failed) return { data: null, error: failed.error };
+    return { data: results.flatMap(r => r.data), error: null };
+}
+
 // ── BX Loader HTML (branded loading spinner — use for popups or inline placeholders) ──
 function bxLoader(label) {
     // Was hardcoded to /favicon.ico, which was never an actual file at the

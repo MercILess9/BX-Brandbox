@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
     <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
+    <script src="/system/system.js?v=2"></script>
     <script src="/system/save-bar.js"></script>
     <script src="/system/multi-select.js"></script>
     <script src="/system/date-picker.js"></script>
@@ -450,10 +450,12 @@
         const qInput = document.getElementById('filterSearch').value.trim();
         if (!owners.length && !qInput) return null;
 
-        let q = supabaseClient.from('b_quest_list').select('id');
-        if (owners.length) q = q.in('owner', owners);
-        if (qInput) q = q.or(['task_name', 'account_name', 'opportunity_name'].map(col => `${col}.ilike.%${qInput}%`).join(','));
-        const { data } = await q;
+        const { data } = await fetchAllRows(() => {
+            let q = supabaseClient.from('b_quest_list').select('id');
+            if (owners.length) q = q.in('owner', owners);
+            if (qInput) q = q.or(['task_name', 'account_name', 'opportunity_name'].map(col => `${col}.ilike.%${qInput}%`).join(','));
+            return q.order('id');
+        });
         return (data || []).map(r => r.id);
     }
 
@@ -538,7 +540,7 @@
     // pagination) so the dropdown always reflects every possible owner,
     // not just whatever happened to already be loaded.
     async function loadOwnerList() {
-        const { data } = await supabaseClient.from('b_quest_list').select('owner').not('owner', 'is', null).neq('owner', '-');
+        const { data } = await fetchAllRows(() => supabaseClient.from('b_quest_list').select('owner').not('owner', 'is', null).neq('owner', '-').order('id'));
         ownerList = [...new Set((data || []).map(r => r.owner).filter(Boolean))].sort();
         populateFilterOwner();
     }

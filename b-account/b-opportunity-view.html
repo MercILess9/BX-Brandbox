@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
+    <script src="/system/system.js?v=2"></script>
     <!-- b-opportunity-modal.js calls attachDatePicker() at its own top
          level (not inside a function — runs the instant the script
          executes) to wire up the Signed/Launch date fields, and its
@@ -38,7 +38,7 @@
          file self-injects its modal markup into document.body on load,
          which needs body to already be parsed. Loaded here so Edit can
          open the exact same modal as the List page's own card dropdown. -->
-    <script src="b-opportunity-modal.js?v=2" defer></script>
+    <script src="b-opportunity-modal.js?v=3" defer></script>
     <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
          b-quest/b-quest-view.html's own Save PDF button. -->
     <script src="/system/pdf-export.js"></script>

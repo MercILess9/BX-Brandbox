@@ -150,6 +150,7 @@ initPage().then(() => observer.observe(triggerEl));
 - List pages use **infinite scroll**: 10–15 items per page via `IntersectionObserver`
 - Filter/search must work across **all data** (not just current page) — fetch complete datasets for filter options separately
 - Master data (work list, profiles, etc.) loaded once per page via `Promise.all`
+- **Bulk reads go through `fetchAllRows()` / `fetchByIds()` (system.js)** — Supabase silently stops at 1000 rows per response (no error), and `.in('col', ids)` puts every id in the URL, which the API rejects past ~24KB (≈650 UUIDs, measured 2026-11-06). Any read that isn't a paged `.range()` list and can grow past a few hundred rows (dropdown option lists, id-set filters, search indexes, whole-table reads) must use them; give paged reads a stable `.order()` (usually the PK). Pages that call them depend on `system.js?v=` being bumped whenever the helpers change (Cloudflare caches JS 4h).
 - Modal helper data (profiles, capacity) cached per page load with `_loaded` flag — re-fetched on page refresh, not on every modal open
 
 ## Brand & UI

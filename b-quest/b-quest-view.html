@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="/system/config.js"></script>
-    <script src="/system/system.js"></script>
+    <script src="/system/system.js?v=2"></script>
     <!-- b-quest-modal.js calls attachDatePicker() at its own top level
          (not inside a function — runs the instant the script executes) to
          wire up the Publish Date field, and openBqPicker() calls
@@ -46,7 +46,7 @@
          level), which needs body to already be parsed. Loaded here too
          so Edit can open the exact same modal as the List page's own
          card dropdown — no separate modal built for this page. -->
-    <script src="b-quest-modal.js?v=17" defer></script>
+    <script src="b-quest-modal.js?v=18" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <!-- Shared html2canvas+jsPDF multi-page-slicing export, also used by
          b-account/b-opportunity-view.html's own Save PDF button — see

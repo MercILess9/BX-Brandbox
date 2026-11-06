@@ -578,7 +578,7 @@ const BOppApp = (() => {
     async function loadHelpers() {
         if (_loaded) return;
         const [{ data: accs }, { data: profs }, { data: cfg }] = await Promise.all([
-            supabaseClient.from('b_account_list').select('account_id, account_name, company_name').order('account_name'),
+            fetchAllRows(() => supabaseClient.from('b_account_list').select('account_id, account_name, company_name').order('account_name').order('account_id')),
             supabaseClient.from('profiles').select('codename').neq('level','god').order('codename'),
             supabaseClient.from('b_opportunity_config').select('type, value, color, active').in('type',['bu','company','status','lead_source','business_type']).order('value')
         ]);
