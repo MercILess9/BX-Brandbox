@@ -7,6 +7,7 @@
 
 const AUTH_ICON_EYE = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
 const AUTH_ICON_EYE_OFF = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+const AUTH_ICON_CHECK = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
 const AUTH_ICON_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
 
 // Show/hide password. Buttons start with the eye icon ("show").
@@ -73,7 +74,9 @@ function setFieldError(inputId, msg) {
 }
 
 // One message for the whole form, right above the submit button.
-function showFormError(form, msg) {
+// action (optional): { label, onClick(btn, box) } — a small inline button
+// after the message, e.g. "Resend confirmation email".
+function showFormError(form, msg, action) {
     if (!form) return;
     let box = form.querySelector('.form-error');
     if (!box) {
@@ -82,10 +85,28 @@ function showFormError(form, msg) {
         box.setAttribute('role', 'alert');
         form.querySelector('.btn-main')?.before(box);
     }
-    box.innerHTML = AUTH_ICON_ALERT + '<span></span>';
+    box.classList.remove('ok');
+    box.innerHTML = AUTH_ICON_ALERT + '<div class="form-error-body"><span></span></div>';
     box.querySelector('span').textContent = msg;
+    if (action) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'form-action';
+        b.textContent = action.label;
+        b.addEventListener('click', () => action.onClick(b, box));
+        box.querySelector('.form-error-body').appendChild(b);
+    }
     box.classList.add('show');
     authShake(box);
+}
+
+// Same box, green, for a quiet "done" without a popup.
+function showFormNote(form, msg) {
+    showFormError(form, msg);
+    const box = form.querySelector('.form-error');
+    box.classList.add('ok');
+    box.classList.remove('auth-shake');
+    box.querySelector('svg').outerHTML = AUTH_ICON_CHECK;
 }
 
 function clearFormErrors(form) {
@@ -133,10 +154,38 @@ async function handleLogin(email, password, form) {
         const msg = (error.message || '').toLowerCase();
         let friendly = error.message || 'Sign in failed. Please try again.';
         if (msg.includes('invalid login credentials')) friendly = 'Incorrect email or password.';
-        else if (msg.includes('email not confirmed')) friendly = 'Please confirm your email first. Check your inbox for the confirmation link.';
+        else if (msg.includes('email not confirmed')) {
+            setBtnLoading(btn, false);
+            return showFormError(form, 'Please confirm your email first. Check your inbox (and Spam) for the confirmation link.', {
+                label: 'Resend confirmation email',
+                onClick: b => resendConfirmation(email, b, form),
+            });
+        }
         else if (msg.includes('failed to fetch') || msg.includes('network')) friendly = 'Can\'t reach the server. Check your connection and try again.';
         setBtnLoading(btn, false);
         showFormError(form, friendly);
+    }
+}
+
+// "Email not confirmed" → send the signup confirmation again, instead of
+// the user signing up a second time (which burns the same small hourly
+// email quota and still fails, since the address is already taken).
+async function resendConfirmation(email, btn, form) {
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    try {
+        const { error } = await supabaseClient.auth.resend({
+            type: 'signup',
+            email,
+            options: { emailRedirectTo: window.location.origin + '/auth/login.html' },
+        });
+        if (error) throw error;
+        showFormNote(form, `Confirmation email sent to ${email}. It can take a minute to arrive.`);
+    } catch (err) {
+        const msg = (err.message || '').toLowerCase();
+        showFormError(form, msg.includes('rate limit') || msg.includes('seconds') || msg.includes('too many')
+            ? 'An email was sent recently. Please wait a minute before asking again.'
+            : (err.message || 'Could not send the email. Please try again.'));
     }
 }
 
@@ -214,14 +263,7 @@ async function handleForgotPassword(email, form) {
         if (error) throw error;
 
         setBtnLoading(btn, false);
-        // No confirmButtonColor — the shared .swal2-styled.swal2-confirm
-        // rule in system.js already themes this correctly (var(--c-dark)),
-        // a hardcoded value here would override it with a stale color.
-        Swal.fire({
-            icon: "success",
-            title: "Link Sent!",
-            text: "Please check your email to reset password."
-        });
+        showResetSent(form, email);
 
     } catch (err) {
         setBtnLoading(btn, false);
@@ -230,6 +272,68 @@ async function handleForgotPassword(email, form) {
             ? 'A reset link was sent recently. Please wait a minute before asking again.'
             : err.message);
     }
+}
+
+// Forgot-password success, shown in the card instead of a popup: where
+// the link went, plus a Resend that stays locked for 60s (Supabase
+// rate-limits reset emails anyway, so an earlier click would only fail).
+const AUTH_RESEND_COOLDOWN = 60;
+function showResetSent(form, email) {
+    let panel = document.getElementById('reset-sent');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'reset-sent';
+        panel.className = 'auth-sent';
+        panel.innerHTML = `
+            <div class="auth-sent-icon"><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></div>
+            <h2>Check your email</h2>
+            <p>We sent a password reset link to <strong class="auth-sent-email"></strong>. It can take a minute to arrive. Check Spam too.</p>
+            <button type="button" class="btn-ghost auth-sent-resend"></button>
+            <button type="button" class="auth-sent-change">Use a different email</button>`;
+        form.after(panel);
+        panel.querySelector('.auth-sent-change').addEventListener('click', () => {
+            panel.hidden = true;
+            form.hidden = false;
+            form.querySelector('input')?.focus();
+        });
+        panel.querySelector('.auth-sent-resend').addEventListener('click', async e => {
+            const b = e.currentTarget;
+            b.disabled = true;
+            b.textContent = 'Sending...';
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(panel.dataset.email, {
+                redirectTo: window.location.origin + '/auth/reset-password.html',
+            });
+            if (error) {
+                b.textContent = 'Couldn\'t send. Try again shortly';
+                setTimeout(() => startResendCooldown(b), 2500);
+                return;
+            }
+            startResendCooldown(b, 'Sent again. ');
+        });
+    }
+    panel.dataset.email = email;
+    panel.querySelector('.auth-sent-email').textContent = email;
+    form.hidden = true;
+    panel.hidden = false;
+    startResendCooldown(panel.querySelector('.auth-sent-resend'));
+}
+
+function startResendCooldown(btn, prefix = '') {
+    clearInterval(btn._cd);
+    let left = AUTH_RESEND_COOLDOWN;
+    btn.disabled = true;
+    const tick = () => {
+        if (left <= 0) {
+            clearInterval(btn._cd);
+            btn.disabled = false;
+            btn.textContent = 'Resend link';
+            return;
+        }
+        btn.textContent = `${prefix}Resend in ${left}s`;
+        left--;
+    };
+    tick();
+    btn._cd = setInterval(tick, 1000);
 }
 
 async function handleUpdatePassword(newPassword, form) {
@@ -267,6 +371,7 @@ async function handleUpdatePassword(newPassword, form) {
 // locks sign-ups to certain email domains, use the first one as that
 // field's example ("name@company.com" otherwise).
 async function initAuthPage({ emailInputId } = {}) {
+    initCapsLockHint();
     const logo = document.getElementById('brandbox-logo');
     const cached = (() => { try { return JSON.parse(localStorage.getItem(BX_BRANDING_CACHE_KEY) || 'null'); } catch { return null; } })();
     applyCachedBranding();
@@ -284,4 +389,27 @@ async function initAuthPage({ emailInputId } = {}) {
         const domain = (fresh.signup_allowed_domains || '').split(',').map(d => d.trim()).filter(Boolean)[0];
         if (domain) input.placeholder = `name@${domain}`;
     }
+}
+
+// "Caps Lock is on" under any password field while it has focus. The
+// state is only readable from a key/mouse event, so it appears on the
+// first keystroke and updates as Caps Lock is toggled.
+function initCapsLockHint() {
+    document.querySelectorAll('.pass-input').forEach(input => {
+        const wrap = input.closest('.input-wrapper');
+        if (!wrap || wrap.nextElementSibling?.classList.contains('caps-hint')) return;
+        const hint = document.createElement('div');
+        hint.className = 'caps-hint';
+        hint.setAttribute('aria-live', 'polite');
+        hint.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 4 13h4v6h8v-6h4z"></path></svg><span>Caps Lock is on</span>';
+        wrap.after(hint);
+        const update = e => {
+            if (typeof e.getModifierState !== 'function') return;
+            hint.classList.toggle('show', e.getModifierState('CapsLock'));
+        };
+        input.addEventListener('keydown', update);
+        input.addEventListener('keyup', update);
+        input.addEventListener('mousedown', update);
+        input.addEventListener('blur', () => hint.classList.remove('show'));
+    });
 }

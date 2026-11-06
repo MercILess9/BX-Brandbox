@@ -93,6 +93,47 @@ input:focus, select:focus { border-color: var(--c-accent); background: #fff; box
 .form-error.show { display: flex; }
 .form-error svg { flex-shrink: 0; margin-top: 2px; }
 
+.form-error-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+/* Inline follow-up action inside the message (login: "Resend
+   confirmation email"). */
+.form-action {
+    background: none; border: none; padding: 0; cursor: pointer;
+    font-size: 0.8rem; font-weight: 800; color: inherit;
+    text-decoration: underline; text-underline-offset: 3px;
+}
+.form-action:disabled { cursor: default; opacity: 0.6; text-decoration: none; }
+/* Same box as a quiet green "done" (showFormNote()). */
+.form-error.ok { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+
+/* Caps Lock warning under a password field (initCapsLockHint()). */
+.caps-hint { display: none; align-items: center; gap: 5px; margin-top: 6px; font-size: 0.76rem; font-weight: 700; color: #b45309; }
+.caps-hint.show { display: flex; }
+
+/* forgot-password.html: "Check your email" panel that replaces the form
+   after a link is sent (showResetSent()). */
+.auth-sent { text-align: center; padding: 0.25rem 0 0; }
+.auth-sent[hidden], form[hidden] { display: none; }
+.auth-sent-icon {
+    width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(var(--c-accent-rgb), 0.15); color: var(--c-accent-dark);
+}
+.auth-sent h2 { font-size: 1.15rem; font-weight: 800; color: var(--auth-text); margin-bottom: 8px; }
+.auth-sent p { font-size: 0.88rem; line-height: 1.55; color: var(--auth-slate); margin-bottom: 1.4rem; overflow-wrap: anywhere; }
+.auth-sent p strong { color: var(--auth-text); }
+.btn-ghost {
+    width: 100%; height: 46px; border-radius: 10px; cursor: pointer;
+    background: #fff; border: 1px solid var(--auth-border); color: var(--auth-text);
+    font-size: 14px; font-weight: 700; transition: 0.2s;
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--c-accent); background: rgba(var(--c-accent-rgb), 0.06); }
+.btn-ghost:disabled { cursor: default; color: var(--auth-muted); background: var(--auth-field-bg); }
+.auth-sent-change {
+    display: block; margin: 14px auto 0; background: none; border: none; cursor: pointer;
+    font-size: 0.82rem; font-weight: 700; color: var(--auth-slate);
+}
+.auth-sent-change:hover { color: var(--auth-text); text-decoration: underline; text-underline-offset: 3px; }
+
 @keyframes auth-shake {
     0%,100% { transform: translateX(0); }
     15% { transform: translateX(-6px); } 30% { transform: translateX(6px); }
