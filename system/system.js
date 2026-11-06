@@ -509,9 +509,8 @@ async function initAuthGuard() {
 
     if (session) {
         const profile = await loadUserProfile(session.user.id);
-        console.log('[AuthGuard] profile:', profile, '| userId:', session.user.id);
         if (!profile) {
-            console.log('[AuthGuard] No profile found — signing out');
+            console.warn('[AuthGuard] No profile found — signing out');
             await supabaseClient.auth.signOut();
             sessionStorage.clear();
             window.location.replace("/auth/login.html");

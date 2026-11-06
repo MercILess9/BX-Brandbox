@@ -1,3 +1,9 @@
+/* Web fonts for every page that loads this file: Inter + Sarabun
+   (project pages, auth) and Outfit (header/portal). Declared in CSS but
+   never actually loaded anywhere until 2026-11-06, so every device fell
+   back to its own system font. @import must stay the first rule here. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap');
+
 /* Shared brand theme tokens — the platform's single accent-color family.
    Every project's own <project>.css (or inline <style> for standalone
    pages) loads this before declaring its own :root, so switching the

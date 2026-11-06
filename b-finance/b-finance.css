@@ -679,3 +679,96 @@ body { font-family: 'Inter', 'Sarabun', sans-serif; background: var(--c-bg); col
    .table-count were only ever used by b-finance-members.html, which was
    rewritten 2026-10-03 to the shared mem-matrix/save-bar.js pattern (ref
    B-Quest's own Members page) — removed as dead. */
+
+/* ── Phone / portrait tablet (992px, same breakpoint as B-Quest and
+   B-Account) ──
+   List page:
+   - Toolbar wraps: sidebar button + Search + Advance + Reset on the
+     first row, Bill Date on the second, the Billing pill full width on
+     the third (repositionBillingSeg() re-measures on resize).
+   - Account list: with no company picked (.sidebar-forced) it IS the
+     page, full width. Once a company is open the list becomes an overlay
+     drawer the sidebar button opens (.sidebar-pinned); picking a company
+     closes it again (selectCompany()). Hover-to-expand is off — a tap
+     leaves :hover stuck on touch screens.
+   - Account info boxes go 2-up, Opportunity/QT totals drop under their
+     title, Finance tables keep their own sideways scroll.
+   Setting/Member pages: tighter wrapper, full-width tabs. */
+@media (max-width: 991.98px) {
+    .fin-toolbar { padding: 10px 0; }
+    .fin-toolbar-inner { padding: 0 16px; }
+    .fin-toolbar-row { height: auto; flex-wrap: wrap; gap: 8px; }
+    .fin-toolbar-spacer { display: none; }
+    .fin-toolbar-right { display: contents; }
+    .fin-sidebar-toggle { order: 1; }
+    /* Nothing to open while the list is already the whole page. */
+    .fin-page:has(.finance-layout.sidebar-forced) .fin-sidebar-toggle { display: none; }
+    .fin-search-wrap { order: 2; flex: 1 1 0; min-width: 0; }
+    .fin-search-input { font-size: 16px; }
+    .flt-btn-adv { order: 3; }
+    .btn-reset { order: 4; position: static; margin-left: 0; }
+    .btn-reset:not(.has-filters) { display: none; }
+    .flt-date-today-wrap { order: 5; flex: 1 1 100%; }
+    .flt-date-today-wrap .flt-select-box { flex: 1 1 auto; width: auto; min-width: 0; }
+    .status-seg-wrap { order: 6; flex: 1 1 100%; }
+    .status-seg-btn { flex: 1 1 0; padding: 0 8px; }
+    .flt-advanced-zone.show { max-height: 260px; margin-top: 8px; padding-top: 8px; }
+    .flt-advanced-row { flex-direction: column; align-items: stretch; gap: 8px; }
+    .flt-advanced-row .flt-select-box { width: 100%; }
+    .flt-advanced-row .flt-btn-quick { justify-content: center; }
+
+    .finance-layout { position: relative; }
+    .fin-sidebar-rail { display: none; }
+    .fin-left, .fin-left:hover { width: 0; min-width: 0; border-right: none; background: #fff; }
+    .fin-tree { opacity: 1; }
+    /* No company picked: the list is the whole page. */
+    .finance-layout.sidebar-forced .fin-left { width: 100%; min-width: 0; border-right: none; }
+    .finance-layout.sidebar-forced .fin-right { display: none; }
+    /* Company open + sidebar button: overlay drawer over the content. */
+    .finance-layout.sidebar-pinned:not(.sidebar-forced) .fin-left {
+        position: absolute; top: 0; bottom: 0; left: 0; z-index: 30;
+        width: min(86vw, 340px); min-width: 0;
+        border-right: 1px solid var(--c-border);
+        box-shadow: 12px 0 32px rgba(15, 23, 42, 0.18);
+    }
+    .finance-layout.sidebar-pinned:not(.sidebar-forced)::after {
+        content: ''; position: absolute; inset: 0; z-index: 25;
+        background: rgba(15, 23, 42, 0.35); pointer-events: none;
+    }
+    .acct-hdr { padding-top: 12px; padding-bottom: 12px; }
+    .company-item { padding-top: 11px; padding-bottom: 11px; }
+
+    .fin-right { padding: 14px 14px 140px; }
+    .acct-hdr-zone { padding: 14px; border-radius: 14px; margin-bottom: 14px; }
+    .acct-hdr-row1 { flex-wrap: wrap; row-gap: 6px; }
+    .acct-hdr-names { flex: 1 1 100%; flex-wrap: wrap; row-gap: 2px; }
+    .acct-hdr-company, .acct-hdr-acname { white-space: normal; }
+    .acct-hdr-dot { display: none; }
+    .acct-hdr-acname { flex-basis: 100%; }
+    .acct-info-boxes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .acct-box-val { overflow-wrap: anywhere; }
+
+    .opp-block { border-radius: 14px; }
+    .opp-hdr { flex-wrap: wrap; padding: 12px 14px; row-gap: 8px; }
+    .opp-meta { flex: 1 1 0; }
+    .opp-hdr .opp-chevron { order: 2; }
+    .opp-nums { order: 3; flex: 1 1 100%; justify-content: flex-start; gap: 12px; }
+    .opp-num-item { text-align: left; }
+    .opp-num-val { font-size: 0.92rem; }
+    .opp-body { padding: 0 10px 10px; }
+    .qt-hdr { flex-wrap: wrap; row-gap: 6px; }
+    .qt-hdr .qt-chevron { margin-left: auto; }
+    .qt-nums { order: 3; flex: 1 1 100%; margin-left: 0; justify-content: flex-start; }
+    .qt-num-item { text-align: left; }
+    .fin-table-wrap { -webkit-overflow-scrolling: touch; }
+
+    .fin-save-bar { width: calc(100% - 24px); padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+    .fin-save-bar.visible { bottom: 12px; }
+    .save-bar-btns { margin-left: auto; }
+
+    .settings-wrapper { padding: 16px 16px 140px; }
+    .page-header { margin-bottom: 14px; }
+    .page-header h1 { font-size: 1.15rem; }
+    .settings-tabnav { gap: 6px; margin-bottom: 14px; }
+    .settings-tab { flex: 1; justify-content: center; padding: 10px 6px; }
+}

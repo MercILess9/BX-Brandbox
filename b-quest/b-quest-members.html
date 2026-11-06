@@ -2,17 +2,18 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>B-QUEST | Member</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
     <script src="/system/config.js"></script>
     <script src="/system/system.js"></script>
     <script src="/system/save-bar.js"></script>
     <script src="/system/people-picker.js"></script>
     <script src="b-quest.js"></script>
-    <link rel="stylesheet" href="/system/theme.css">
+    <link rel="stylesheet" href="/system/theme.css?v=2">
     <link rel="stylesheet" href="b-quest.css?v=2">
 
     <style>
@@ -340,6 +341,27 @@
         .bq-toggle.small .bq-slider:before { height: 10px; width: 10px; left: 3px; bottom: 3px; }
         .bq-toggle.small input:checked + .bq-slider:before { transform: translateX(12px); }
 
+        /* ── Phone / portrait tablet (992px, same as the other pages): the
+           header stacks (title / search / Bulk + Add), the permission
+           table keeps its sideways scroll but with a narrower sticky name
+           column so the toggles next to it are visible; popups fit.
+           Same block as b-account-members.html. ── */
+        @media (max-width: 991.98px) {
+            .settings-wrapper { padding: 16px 16px 140px; }
+            .page-header { margin-bottom: 14px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .settings-tabnav { gap: 6px; margin-bottom: 14px; }
+            .settings-tab { flex: 1; justify-content: center; padding: 10px 6px; }
+            .section { border-radius: 16px; }
+            .section-header { padding: 12px 14px; }
+            .section-header.mem-header-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+            .section-header .table-search-wrap { max-width: none; }
+            .mem-header-grid .mem-header-right-group { justify-self: stretch; justify-content: space-between; }
+            .section-body { padding: 12px 14px; }
+            .mem-matrix th.mem-col-name, .mem-matrix td.mem-col-name { width: 150px; }
+            #mem-list colgroup col:nth-child(2) { width: 150px !important; }
+            .mem-filter-modal, .cfg-picker.medium { width: calc(100vw - 24px); }
+        }
     </style>
 </head>
 <body>
