@@ -27,13 +27,51 @@ function gpPct(gp: number, amt: number): string {
   return (gp / amt * 100).toFixed(1) + '%'
 }
 
-// Sender and recipients come from Function secrets, never from the request:
-// this function has verify_jwt off and its body is caller-controlled, so a
-// `to` taken from the body would let anyone send mail as our verified domain.
-//   MAIL_FROM  e.g. "BrandStrom X <noreply@brandboxplatform.com>"
-//   NOTIFY_TO  comma-separated recipient list (no secret = nothing is sent)
+// Every DB/user-supplied string goes through esc() before it lands in the HTML.
+function esc(s: unknown): string {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+function safeLink(u: unknown): string {
+  const s = String(u ?? '').trim()
+  return /^https?:\/\//i.test(s) ? esc(s) : '#'
+}
+
+// Sender and recipients come from Function secrets + the database, never from
+// the request: the body is caller-controlled, so a `to` taken from it would
+// let anyone send mail as our verified domain.
+//   MAIL_FROM         e.g. "BrandStrom X <noreply@brandboxplatform.com>"
+//   NOTIFY_CODENAMES  comma-separated profiles.codename, always notified
+//   NOTIFY_TO         comma-separated raw email addresses, always notified
+// On top of those, the opportunity's own Owner (read from b_opportunity_list,
+// not from the body) is added. Emails are looked up in `profiles`.
 const MAIL_FROM = Deno.env.get('MAIL_FROM') || 'Brandbox Platform <noreply@brandboxplatform.com>'
-const NOTIFY_TO = (Deno.env.get('NOTIFY_TO') || '').split(',').map(s => s.trim()).filter(Boolean)
+const list = (k: string) => (Deno.env.get(k) || '').split(',').map(s => s.trim()).filter(Boolean)
+const NOTIFY_CODENAMES = list('NOTIFY_CODENAMES')
+const NOTIFY_TO = list('NOTIFY_TO')
+
+async function rest(path: string): Promise<any[]> {
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+  const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/${path}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  })
+  if (!r.ok) throw new Error(`DB read failed (${r.status}): ${(await r.text()).slice(0, 200)}`)
+  return await r.json()
+}
+
+async function resolveRecipients(opportunityId: string | undefined): Promise<string[]> {
+  const codenames = new Set(NOTIFY_CODENAMES)
+  if (opportunityId) {
+    const [opp] = await rest(`b_opportunity_list?select=owner&opportunity_id=eq.${encodeURIComponent(opportunityId)}`)
+    if (opp?.owner) codenames.add(opp.owner)
+  }
+  const emails = new Set(NOTIFY_TO.map(e => e.toLowerCase()))
+  if (codenames.size) {
+    const inList = [...codenames].map(c => `"${c.replace(/"/g, '')}"`).join(',')
+    const rows = await rest(`profiles?select=email&codename=in.(${encodeURIComponent(inList)})`)
+    for (const r of rows) if (r.email) emails.add(String(r.email).toLowerCase())
+  }
+  return [...emails]
+}
 
 // Only a signed-in Brandbox user may trigger a send.
 async function isSignedIn(req: Request): Promise<boolean> {
@@ -54,15 +92,10 @@ serve(async (req) => {
         status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
-    if (!NOTIFY_TO.length) throw new Error('NOTIFY_TO secret is not set')
-
     const body = await req.json()
     const {
       action = 'new',
-      opportunity_id, opportunity_name, create_by, create_date,
-      account_name, company_name,
-      launch_date, signed_date, remark,
-      business_type, lead_source, owner, am, sub_am,
+      create_date, launch_date, signed_date,
       materials, proposal,
       amount, gp,           // sign (original) totals
       churn_amount, churn_gp, churn_date,
@@ -70,6 +103,15 @@ serve(async (req) => {
       churnQTs = [],        // churn QTs (only for action='churn')
       qts      = [],        // fallback (new opportunity)
     } = body
+
+    // Escaped copies under the names the template already uses.
+    const [opportunity_id, opportunity_name, create_by, account_name, company_name,
+           remark, business_type, lead_source, owner, am, sub_am] =
+      ['opportunity_id', 'opportunity_name', 'create_by', 'account_name', 'company_name',
+       'remark', 'business_type', 'lead_source', 'owner', 'am', 'sub_am'].map(k => body[k] ? esc(body[k]) : '')
+
+    const to = await resolveRecipients(body.opportunity_id)
+    if (!to.length) throw new Error('No recipients (set NOTIFY_CODENAMES / NOTIFY_TO)')
 
     const cfg = ACTION_CFG[action] || ACTION_CFG.new
     const isChurn = action === 'churn'
@@ -137,8 +179,8 @@ serve(async (req) => {
       const rows = (qt.items || []).filter((i: any) => i.detail?.trim() || +i.price > 0).map((i: any) => {
         const itemAmt = i.amount || Math.max(0, (+i.qty||1) * (+i.price||0) - (+i.discount||0))
         return `<tr style="border-bottom:1px solid #f8fafc">
-          <td style="padding:9px 14px;color:#bdc432;font-weight:700;font-size:12px;white-space:nowrap">${i.bu || '—'}</td>
-          <td style="padding:9px 14px;color:#334155;font-size:13px;line-height:1.5">${i.detail || '—'}</td>
+          <td style="padding:9px 14px;color:#bdc432;font-weight:700;font-size:12px;white-space:nowrap">${esc(i.bu) || '—'}</td>
+          <td style="padding:9px 14px;color:#334155;font-size:13px;line-height:1.5">${esc(i.detail) || '—'}</td>
           <td style="padding:9px 14px;text-align:center;font-weight:700;color:#1e293b;font-size:13px">${i.qty ?? 1}</td>
           <td style="padding:9px 14px;text-align:right;color:#64748b;font-size:12px">${fNum(i.price)}</td>
           <td style="padding:9px 14px;text-align:right;color:#ef4444;font-size:12px">${+i.discount > 0 ? fNum(i.discount) : '—'}</td>
@@ -153,7 +195,7 @@ serve(async (req) => {
       const buClr      = style === 'sign'  ? '#94a3b8' : '#bdc432'
       const opacity    = isSign ? 'opacity:0.6;' : ''
       const coLabel = qt.company_qt
-        ? `<span style="font-size:11px;background:${isSign ? '#e2e8f0' : 'rgba(189,196,50,0.15)'};color:${isSign ? '#64748b' : '#7a8500'};padding:2px 10px;border-radius:20px;font-weight:700;margin-left:10px">${qt.company_qt}</span>`
+        ? `<span style="font-size:11px;background:${isSign ? '#e2e8f0' : 'rgba(189,196,50,0.15)'};color:${isSign ? '#64748b' : '#7a8500'};padding:2px 10px;border-radius:20px;font-weight:700;margin-left:10px">${esc(qt.company_qt)}</span>`
         : ''
       const qtGpPct = gpPct(qt._totGP, qt._totAmt)
 
@@ -163,7 +205,7 @@ serve(async (req) => {
           <td style="background:${headBg};padding:11px 16px;border-bottom:1px solid ${borderClr}">
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
-                <td><span style="font-size:13px;font-weight:800;color:#1e293b">QT : ${qt.qt_number || '—'}</span>${coLabel}</td>
+                <td><span style="font-size:13px;font-weight:800;color:#1e293b">QT : ${esc(qt.qt_number) || '—'}</span>${coLabel}</td>
                 <td align="right" style="white-space:nowrap">
                   <span style="font-size:11px;color:#64748b;margin-right:12px">Amount <b style="color:#1e293b;font-size:13px">${fNum(qt._totAmt)} ฿</b></span>
                   <span style="font-size:11px;color:#64748b;margin-right:12px">GP <b style="color:#16a34a;font-size:13px">${fNum(qt._totGP)} ฿</b></span>
@@ -205,10 +247,10 @@ serve(async (req) => {
 
     // ── Buttons ──────────────────────────────────────────────────────────────
     const btnMaterials = materials
-      ? `<a href="${materials}" style="display:inline-block;background:#fff;color:#1e293b;border:1.5px solid #e2e8f0;text-decoration:none;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;margin-right:8px">📎 Materials</a>`
+      ? `<a href="${safeLink(materials)}" style="display:inline-block;background:#fff;color:#1e293b;border:1.5px solid #e2e8f0;text-decoration:none;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;margin-right:8px">📎 Materials</a>`
       : ''
     const btnProposal = proposal
-      ? `<a href="${proposal}" style="display:inline-block;background:#1e293b;color:#bdc432;text-decoration:none;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700">📄 Proposal</a>`
+      ? `<a href="${safeLink(proposal)}" style="display:inline-block;background:#1e293b;color:#bdc432;text-decoration:none;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700">📄 Proposal</a>`
       : ''
 
     // ── HTML ─────────────────────────────────────────────────────────────────
@@ -352,8 +394,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: MAIL_FROM,
-        to: NOTIFY_TO,
-        subject: `[${cfg.label}] ${opportunity_id ? opportunity_id + ' · ' : ''}${opportunity_name || ''}`,
+        to,
+        subject: `[${cfg.label}] ${body.opportunity_id ? body.opportunity_id + ' · ' : ''}${body.opportunity_name || ''}`,
         html,
       }),
     })

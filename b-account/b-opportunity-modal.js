@@ -1600,15 +1600,13 @@ const BOppApp = (() => {
                 oppId = data.opportunity_id;
                 _newOppId = oppId;
                 for (const qt of _qts) await insertQTToDB(oppId, qt, 'original');
-                // New-Opportunity email notification — disabled 2026-10-14
-                // at the user's request (recipient was hardcoded to
-                // thitiphon@brand-strom.com with no way to configure it from
-                // the UI). The send-notification Edge Function itself is
-                // untouched/still deployed, so this can be re-enabled by
-                // uncommenting once there's a real configurable recipient.
-                /*
-                // The function now requires the caller's session token and
-                // reads its recipients from the NOTIFY_TO secret.
+                // New-Opportunity email notification (re-enabled 2026-11-09).
+                // Fire-and-forget: a failed email never blocks the save.
+                // Recipients are decided server-side by send-notification:
+                // this opportunity's Owner (read from the DB) plus the fixed
+                // NOTIFY_CODENAMES secret — nothing in this body picks who
+                // gets the mail. Only this insert path calls it, so Edit
+                // never sends.
                 fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await supabaseClient.auth.getSession()).data.session?.access_token}` },
@@ -1638,10 +1636,9 @@ const BOppApp = (() => {
                             _totGP:     q._totGP,
                             items:      q.items,
                         })),
-                        to: ['thitiphon@brand-strom.com'],
                     }),
-                }).catch(err => console.warn('[notify]', err));
-                */
+                }).then(r => r.ok || r.text().then(t => console.warn('[notify]', r.status, t)))
+                  .catch(err => console.warn('[notify]', err));
             }
 
             getBsModal().hide();
