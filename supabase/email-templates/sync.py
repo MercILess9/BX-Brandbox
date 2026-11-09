@@ -109,8 +109,12 @@ def api(fork, method, path, body=None):
         f"https://api.supabase.com/v1/projects/{FORKS[fork]['ref']}{path}",
         data=json.dumps(body).encode() if body is not None else None, method=method,
         headers={'Authorization': 'Bearer ' + token(fork), 'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        # Surface Supabase's own reason (e.g. templates need custom SMTP first).
+        sys.exit(f'{fork}: {method} {path} failed ({e.code}): {e.read().decode()[:300]}')
 
 
 def branding(fork):
