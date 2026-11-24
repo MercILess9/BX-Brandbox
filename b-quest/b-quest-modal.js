@@ -585,8 +585,12 @@ const BQuestApp = (() => {
         }
     };
 
-    // Roles the current user can actually open (has New on) — a role
-    // without that permission just never gets a card, not a disabled one.
+    // Roles that get a card in this modal: New OR Edit on that role.
+    // Edit-only matters for an assignee (e.g. a Designer with Edit/Own but
+    // no New) — they must still see their own role card on an existing
+    // task to move its status to Done. Such a card is only SHOWN when the
+    // role is already on the task; on a new task / Duplicate it stays
+    // hidden, since adding a role is what 'new' gates (canNewRole below).
     async function loadVisibleRoles() {
         // Unfiltered — a deactivated role can still be on an existing
         // task's data, and State.roleNameById has to resolve it (for the
@@ -597,7 +601,7 @@ const BQuestApp = (() => {
         // lookup itself.
         const { data } = await supabaseClient.from('b_quest_role').select('id, name, color, icon, max_capacity, active').order('sort_order');
         State.roleNameById = Object.fromEntries((data || []).map(r => [r.id, r.name]));
-        State.visibleRoles = (data || []).filter(r => r.active !== false && (typeof canBquestEditRole !== 'function' || canBquestEditRole(r.name, 'new')));
+        State.visibleRoles = (data || []).filter(r => r.active !== false && (canNewRole(r.name) || typeof canBquestEditRole !== 'function' || canBquestEditRole(r.name, 'edit')));
         State.visibleRoles.forEach(r => { State.maxCap[r.id] = r.max_capacity ?? 10; });
     }
 
@@ -613,6 +617,10 @@ const BQuestApp = (() => {
     // pickTintTextColor() are now shared helpers in b-quest.js (loaded
     // before this file wherever it's used) — were identical local copies
     // here.
+
+    function canNewRole(roleName) {
+        return typeof canBquestEditRole !== 'function' || canBquestEditRole(roleName, 'new');
+    }
 
     function roleCardHtml(role) {
         const c = role.color || '#64748b';
@@ -1417,6 +1425,7 @@ const BQuestApp = (() => {
                         const hasRoleData = !!row;
                         el(`check-${role.id}`).checked = hasRoleData;
                         updateRoleUI(role.id);
+                        el(`card-${role.id}`).style.display = (hasRoleData || canNewRole(role.name)) ? '' : 'none';
 
                         const statusEl = el(`b-quest-modal-${role.id}-status`);
                         if (hasRoleData) fillRoleCardData(role.id, row);
@@ -1434,7 +1443,7 @@ const BQuestApp = (() => {
                         // (already true, or the card wouldn't be visible).
                         const canEditRole = hasRoleData
                             ? (typeof canBquestActOnRole === 'function' ? canBquestActOnRole(role.name, row.assign, 'edit', isOwner) : true)
-                            : (typeof canBquestEditRole === 'function' ? canBquestEditRole(role.name) : true);
+                            : canNewRole(role.name);
                         const card = el(`card-${role.id}`);
                         card.querySelectorAll('input, select, textarea').forEach(inp => inp.disabled = !canEditRole);
                         el(`check-${role.id}`).disabled = !canEditRole;
@@ -1455,6 +1464,7 @@ const BQuestApp = (() => {
                     const card = el(`card-${role.id}`);
                     card.querySelectorAll('input, select, textarea, button').forEach(inp => inp.disabled = false);
                     card.style.opacity = '';
+                    card.style.display = canNewRole(role.name) ? '' : 'none';
                 });
             }
             bootstrap.Modal.getOrCreateInstance(el('b-quest-modal')).show();
@@ -1649,8 +1659,10 @@ const BQuestApp = (() => {
             // not an exact clone of an in-flight assignment.
             const roleRowsByRole = Object.fromEntries(roleRows.map(r => [r.role_id, r]));
             State.visibleRoles.forEach(role => {
-                const srcRow = roleRowsByRole[role.id];
+                // Duplicate makes a NEW task, so only roles with 'new'.
+                const srcRow = canNewRole(role.name) ? roleRowsByRole[role.id] : null;
                 const hasRoleData = !!srcRow;
+                el(`card-${role.id}`).style.display = canNewRole(role.name) ? '' : 'none';
                 el(`check-${role.id}`).checked = hasRoleData;
                 updateRoleUI(role.id);
 
