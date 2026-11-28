@@ -81,7 +81,7 @@ Tables currently covered: `system_access.codename`, `b_account_setting.codename`
 
 **User profile:** Stored in `sessionStorage` as `bx_user` after login.
 
-**God mode:** `profiles.level === 'god'` → bypasses all permission checks, never shown in member lists (always filter `.neq('level', 'god')`). God user is not listed in any project's member/setting table.
+**God mode:** `profiles.level === 'god'` → bypasses all permission checks. Since 2026-11-28 a GOD is listed everywhere like any other user (member tables, pickers, Owner/AM dropdowns, Users & Access) with **no badge** — do NOT add `.neq('level', 'god')` filters back. Permission toggles on a GOD's row are stored but never consulted (GOD bypasses). Protection: Users & Access/Access tabs render no delete/ban/password/logout control on a GOD row and lock its fields for non-GOD viewers; the DB trigger `trg_profiles_protect_god` (`20261128000000_protect_god_profile.sql`) blocks deleting or demoting a GOD and lets only a GOD edit a GOD row or grant GOD level.
 
 **Per-project permissions:** Each project has its own settings table (e.g. `b-quest-setting`). Permissions are cached in `sessionStorage` with key `bx_perms_<project>` (e.g. `bx_perms_bquest`). Cleared on index and on every project page load to ensure fresh perms on refresh.
 

@@ -601,7 +601,7 @@
     }
 
     async function loadProfiles() {
-        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, full_name, employee_id, department, avatar_url').neq('level', 'god').order('codename');
+        const { data } = await supabaseClient.from('profiles').select('codename, nick_name, full_name, employee_id, department, avatar_url').order('codename');
         _allProfiles = data || [];
     }
 

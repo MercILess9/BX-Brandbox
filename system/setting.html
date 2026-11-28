@@ -3133,7 +3133,6 @@
         const { data } = await supabaseClient
             .from('profiles')
             .select('*')
-            .neq('level', 'god')
             .order('codename');
         allUsers = data || [];
         allUsersById = new Map(allUsers.map(u => [u.id, u]));
@@ -3262,6 +3261,14 @@
             const ch = accessChanges[u.codename];
             const acc = ch ? { ...(accessData[u.codename] || {}), ...ch } : (accessData[u.codename] || {});
             const isDeleted = ch?._delete;
+            // A GOD account is listed like anyone else (no badge), but it
+            // can never be removed from here, and only a GOD may edit its
+            // name/ID/department. Its Setting/Holiday/Member toggles are
+            // locked: GOD bypasses those flags anyway. The DB trigger
+            // trg_profiles_protect_god enforces the same on the server.
+            const isGodRow = u.level === 'god';
+            const lockRow = isGodRow && getBxUser()?.level !== 'god';
+            const sysDis = (isDeleted || isGodRow) ? 'disabled' : '';
 
             const projectToggles = PROJECT_COLS.map((p, i) => `
                 <td class="${i === 0 ? 'usr-zone-divider' : ''}">
@@ -3275,25 +3282,25 @@
             const sysAccessToggles = canSeeSystemAccess() ? `
                 <td class="usr-zone-divider">
                     <label class="bq-toggle t-sys t-admin">
-                        <input type="checkbox" ${acc.system_setting ? 'checked' : ''} onchange="onSysSettingToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
+                        <input type="checkbox" ${acc.system_setting ? 'checked' : ''} onchange="onSysSettingToggle('${u.id}',this.checked)" ${sysDis}>
                         <span class="bq-slider"></span>
                     </label>
                 </td>
                 <td>
                     <label class="bq-toggle t-sys t-admin">
-                        <input type="checkbox" ${acc.system_holiday ? 'checked' : ''} onchange="onSysHolidayToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
+                        <input type="checkbox" ${acc.system_holiday ? 'checked' : ''} onchange="onSysHolidayToggle('${u.id}',this.checked)" ${sysDis}>
                         <span class="bq-slider"></span>
                     </label>
                 </td>
                 <td>
                     <label class="bq-toggle t-sys t-admin">
-                        <input type="checkbox" ${acc.system_member ? 'checked' : ''} onchange="onSysMemberToggle('${u.id}',this.checked)" ${isDeleted ? 'disabled' : ''}>
+                        <input type="checkbox" ${acc.system_member ? 'checked' : ''} onchange="onSysMemberToggle('${u.id}',this.checked)" ${sysDis}>
                         <span class="bq-slider"></span>
                     </label>
                 </td>` : '';
 
-            const dis = isDeleted ? 'disabled' : '';
-            const actionBtn = isDeleted
+            const dis = (isDeleted || lockRow) ? 'disabled' : '';
+            const actionBtn = isGodRow ? '' : isDeleted
                 ? `<button class="btn-undo-del" onclick="undoDelete('${u.codename}')" title="Undo delete"><i class="bi bi-arrow-counterclockwise"></i></button>`
                 : `<button class="btn-remove" onclick="openDelModal('${u.codename}','${u.codename}')" title="Remove user"><i class="bi bi-trash3"></i></button>`;
 
@@ -3797,10 +3804,13 @@
                 ? `<i class="bi bi-check-circle-fill acc-confirm-icon ok" title="Confirmed"></i>`
                 : `<i class="bi bi-exclamation-circle-fill acc-confirm-icon warn" title="Pending confirmation"></i>`;
             const email = esc(a.email);
+            // GOD account: listed, but no delete/ban/password/logout controls
+            // (admin-manage-account refuses them for GOD anyway).
+            const isGodAcc = allUsersById.get(a.id)?.level === 'god';
 
             return `
             <tr class="usr-row ${isBanned ? 'is-banned' : ''}" data-aid="${a.id}">
-                <td class="usr-col-trash"><button class="btn-acc-action danger" onclick="openAccountDelModal('${a.id}')" title="Delete account"><i class="bi bi-trash3"></i></button></td>
+                <td class="usr-col-trash">${isGodAcc ? '' : `<button class="btn-acc-action danger" onclick="openAccountDelModal('${a.id}')" title="Delete account"><i class="bi bi-trash3"></i></button>`}</td>
                 <td class="usr-col-name">
                     <div class="usr-name-cell">
                         <div class="usr-avatar"><span>${esc(getInitials(a.nick_name || a.full_name || a.email))}</span></div>
@@ -3817,16 +3827,16 @@
                 <td>${confirmedIcon}</td>
                 <td>
                     <label class="bq-toggle t-sys" title="${isBanned ? 'Click to enable login' : 'Click to disable login'}">
-                        <input type="checkbox" ${isBanned ? '' : 'checked'} onchange="toggleBanAccount('${a.id}','${email}', this.checked)">
+                        <input type="checkbox" ${isBanned ? '' : 'checked'} onchange="toggleBanAccount('${a.id}','${email}', this.checked)" ${isGodAcc ? 'disabled' : ''}>
                         <span class="bq-slider"></span>
                     </label>
                 </td>
                 <td>
                     <div class="acc-actions-row">
-                        <button class="btn-acc-action" onclick="openSetPwModal('${a.id}','${email}')" title="Set password"><i class="bi bi-key"></i></button>
+                        ${isGodAcc ? '' : `<button class="btn-acc-action" onclick="openSetPwModal('${a.id}','${email}')" title="Set password"><i class="bi bi-key"></i></button>`}
                         <button class="btn-acc-action" onclick="sendResetLink('${email}')" title="Send reset password link"><i class="bi bi-envelope-paper"></i></button>
                         ${isConfirmed ? '' : `<button class="btn-acc-action" onclick="sendReconfirmLink('${email}')" title="Send re-confirm link"><i class="bi bi-envelope-check"></i></button>`}
-                        <button class="btn-acc-action" onclick="forceLogoutAccount('${a.id}','${email}')" title="Force logout — sign out of every device"><i class="bi bi-box-arrow-right"></i></button>
+                        ${isGodAcc ? '' : `<button class="btn-acc-action" onclick="forceLogoutAccount('${a.id}','${email}')" title="Force logout — sign out of every device"><i class="bi bi-box-arrow-right"></i></button>`}
                     </div>
                 </td>
             </tr>`;
